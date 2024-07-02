@@ -1,0 +1,35 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+colorama = "*"
+pyyaml = "*"
+requests = "*"
+tabulate = "*"
+protopy = {editable = true, path = "."}
+logunittest = {editable = true, path = "/Users/Lars/python_venvs/packages/logunittest"}
+tox = "*"
+pytest = "*"
+psutil = "*"
+jinja2 = "*"
+graphviz = "*"
+pywin32 = "*"
+winshell = "*"
+pynput = "*"
+pygetwindow = "*"
+
+[dev-packages]
+black = "*"
+pre-commit = "*"
+toml = "*"
+openai = "*"
+
+[requires]
+python_version = "3.7"
+
+[scripts]
+git_sync = "lut ut -g"
+ut = "python -m unittest discover -s ${appName}/test/test_ut"
+it = "python -m unittest discover -s ${appName}/test/test_it -p 'it_*.py'"

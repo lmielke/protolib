@@ -1,0 +1,70 @@
+{
+    "base": {
+        "name": "CodeFile.create_python_module",
+        "description": "\n        Writes/Overwrites an entire Python module file with content:str (valid python code) \n        in a subdirectory of `sts.project_dir`. PEP8 must be followed.\n        Args:\n            content (str): The Python code to be written to the file.\n                Example: see modified PEP8 info section.\n            module_name (str): The name of the Python file to be created.\n                Examples:\n                - 'settings.py'\n                - 'chat.py'\n            module_dir (str, optional): The relative directory path from `sts.project_dir` \n                                        where the file will be created.\n                                        Defaults to `sts.project_dir/resources` if not provided.\n\n        Returns:\n            dict: status = {'status': True/False, 'body': message}\n        ",
+        "import": "protopy.helpers.sys_exec.code_file",
+        "module_path": "C:\\Users\\lars\\python_venvs\\libs\\protolib\\protopy\\helpers\\sys_exec\\code_file.py",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "self": {
+                    "type": "object",
+                    "default": null,
+                    "required": true
+                },
+                "content": {
+                    "type": "<class 'str'>",
+                    "default": null,
+                    "required": true
+                },
+                "module_name": {
+                    "type": "<class 'str'>",
+                    "default": "2024-07-02-15-27-13-213216_un_named.py",
+                    "required": false
+                },
+                "module_dir": {
+                    "type": "<class 'str'>",
+                    "default": "protopy/resources",
+                    "required": false
+                }
+            }
+        },
+        "body": "def create_python_module(self, *args, \n                                        content:str, \n                                        module_name:str=f\"{time_stamp}_un_named.py\",\n                                        module_dir:str='protopy/resources',\n                                        **kwargs,\n        ) -> dict:\n        \"\"\"\n        Writes/Overwrites an entire Python module file with content:str (valid python code) \n        in a subdirectory of `sts.project_dir`. PEP8 must be followed.\n        Args:\n            content (str): The Python code to be written to the file.\n                Example: see modified PEP8 info section.\n            module_name (str): The name of the Python file to be created.\n                Examples:\n                - 'settings.py'\n                - 'chat.py'\n            module_dir (str, optional): The relative directory path from `sts.project_dir` \n                                        where the file will be created.\n                                        Defaults to `sts.project_dir/resources` if not provided.\n\n        Returns:\n            dict: status = {'status': True/False, 'body': message}\n        \"\"\"\n        # module_dir must be a directory inside the package\n        module_dir = os.path.join(sts.project_dir, module_dir)\n        # we assert that module_dir is a valid directory\n        if not os.path.isdir(module_dir):\n            return {'status': False, 'body': f'Invalid path: {module_dir}'}\n        # we assert that module_name ends with '.py'\n        if not module_name.endswith('.py'):\n            module_name += '.py'\n        # we validate that the content adheres to our modified PEP8\n        # black.format_file_in_place(module_name, write_back=black.WriteBack.CHECK)\n        with open(os.path.join(module_dir, module_name), 'w') as f:\n            f.write(content)\n        return {'status': True, 'body': f'File {module_name} created in {module_dir}'}",
+        "returns": "<class 'dict'>",
+        "example": "@f_json.open_ai_function(apis={\"open_ai_api_\",}, write=True,)\n    def test_create_python_module(self):\n        \"\"\"\n        This is an example on how to use create_python_module.\n        IMPORTANT: Adhere to modified PEP8 at all times!\n        \"\"\"\n        system = CodeFile()\n        # create a meaninful module_name\n        module_name='test_create_python_module.py'\n        # the module directory is a relative path to the package dir\n        module_dir = os.path.relpath(self.test_create_python_module_dir, sts.project_dir)\n        # create the python module\n        # this is how we call the function\n        r = system.create_python_module(\n                            module_name=module_name, \n                            module_dir=module_dir, \n                            content=self.code,# testing only, example code from the docstring\n                )\n        # we check the status for success, status returns true if successful\n        self.assertTrue(r.get('status'))\n        # we import the created file to assert its correctness\n        module_path = os.path.join(module_dir, module_name)\n        dot_path = os.path.splitext(module_path)[0].replace(os.sep, '.')\n        import importlib\n        module = importlib.import_module(dot_path)\n        self.assertEqual(\n                            inspect.getdoc(module).replace(' ', '').strip(), \n                            self.code.split('\"\"\"')[1].replace(' ', '').strip(),\n                            )"
+    },
+    "open_ai_api_": {
+        "name": "CodeFile.create_python_module",
+        "description": "\n        Writes/Overwrites an entire Python module file with content:str (valid python code) \n        in a subdirectory of `sts.project_dir`. PEP8 must be followed.\n        Args:\n            content (str): The Python code to be written to the file.\n                Example: see modified PEP8 info section.\n            module_name (str): The name of the Python file to be created.\n                Examples:\n                - 'settings.py'\n                - 'chat.py'\n            module_dir (str, optional): The relative directory path from `sts.project_dir` \n                                        where the file will be created.\n                                        Defaults to `sts.project_dir/resources` if not provided.\n\n        Returns:\n            dict: status = {'status': True/False, 'body': message}\n        ",
+        "import": "protopy.helpers.sys_exec.code_file",
+        "module_path": "C:\\Users\\lars\\python_venvs\\libs\\protolib\\protopy\\helpers\\sys_exec\\code_file.py",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "content": {
+                    "type": "string",
+                    "default": null,
+                    "enum": []
+                },
+                "module_name": {
+                    "type": "string",
+                    "default": "2024-07-02-15-27-13-213216_un_named.py",
+                    "enum": [
+                        "'settings.py'",
+                        "'chat.py'"
+                    ]
+                },
+                "module_dir": {
+                    "type": "string",
+                    "default": "protopy/resources"
+                }
+            },
+            "required": [
+                "content"
+            ]
+        },
+        "body": "def create_python_module(self, *args, \n                                        content:str, \n                                        module_name:str=f\"{time_stamp}_un_named.py\",\n                                        module_dir:str='protopy/resources',\n                                        **kwargs,\n        ) -> dict:\n        \"\"\"\n        Writes/Overwrites an entire Python module file with content:str (valid python code) \n        in a subdirectory of `sts.project_dir`. PEP8 must be followed.\n        Args:\n            content (str): The Python code to be written to the file.\n                Example: see modified PEP8 info section.\n            module_name (str): The name of the Python file to be created.\n                Examples:\n                - 'settings.py'\n                - 'chat.py'\n            module_dir (str, optional): The relative directory path from `sts.project_dir` \n                                        where the file will be created.\n                                        Defaults to `sts.project_dir/resources` if not provided.\n\n        Returns:\n            dict: status = {'status': True/False, 'body': message}\n        \"\"\"\n        # module_dir must be a directory inside the package\n        module_dir = os.path.join(sts.project_dir, module_dir)\n        # we assert that module_dir is a valid directory\n        if not os.path.isdir(module_dir):\n            return {'status': False, 'body': f'Invalid path: {module_dir}'}\n        # we assert that module_name ends with '.py'\n        if not module_name.endswith('.py'):\n            module_name += '.py'\n        # we validate that the content adheres to our modified PEP8\n        # black.format_file_in_place(module_name, write_back=black.WriteBack.CHECK)\n        with open(os.path.join(module_dir, module_name), 'w') as f:\n            f.write(content)\n        return {'status': True, 'body': f'File {module_name} created in {module_dir}'}",
+        "returns": "<class 'dict'>",
+        "example": "@f_json.open_ai_function(apis={\"open_ai_api_\",}, write=True,)\n    def test_create_python_module(self):\n        \"\"\"\n        This is an example on how to use create_python_module.\n        IMPORTANT: Adhere to modified PEP8 at all times!\n        \"\"\"\n        system = CodeFile()\n        # create a meaninful module_name\n        module_name='test_create_python_module.py'\n        # the module directory is a relative path to the package dir\n        module_dir = os.path.relpath(self.test_create_python_module_dir, sts.project_dir)\n        # create the python module\n        # this is how we call the function\n        r = system.create_python_module(\n                            module_name=module_name, \n                            module_dir=module_dir, \n                            content=self.code,# testing only, example code from the docstring\n                )\n        # we check the status for success, status returns true if successful\n        self.assertTrue(r.get('status'))\n        # we import the created file to assert its correctness\n        module_path = os.path.join(module_dir, module_name)\n        dot_path = os.path.splitext(module_path)[0].replace(os.sep, '.')\n        import importlib\n        module = importlib.import_module(dot_path)\n        self.assertEqual(\n                            inspect.getdoc(module).replace(' ', '').strip(), \n                            self.code.split('\"\"\"')[1].replace(' ', '').strip(),\n                            )"
+    }
+}

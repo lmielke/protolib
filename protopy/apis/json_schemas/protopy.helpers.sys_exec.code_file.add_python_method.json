@@ -1,0 +1,77 @@
+{
+    "base": {
+        "name": "CodeFile.add_python_method",
+        "description": "\n        Inserts or overwrites a python class method in a given python module. Use to extend\n        or modify existing classes in the python module.\n        Args:\n            content (str):  The Python code for the new method to be inserted\n                            or used as a replacement.\n            below_method (str, optional):   Method name to insert the new content after. \n                                            The content will be added below this method.\n            replace_method (str, optional): Method name an existing method to be replaced. \n                                            For new methods, set to None.\n            module_path (str):  Path to the Python module file. Always try to provide this!\n                                If not provided, content will be added to a unassigned bucket.\n        Returns:\n            dict: status = {'status': True/False, 'body': message}\n        ",
+        "import": "protopy.helpers.sys_exec.code_file",
+        "module_path": "C:\\Users\\lars\\python_venvs\\libs\\protolib\\protopy\\helpers\\sys_exec\\code_file.py",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "self": {
+                    "type": "object",
+                    "default": null,
+                    "required": true
+                },
+                "content": {
+                    "type": "<class 'str'>",
+                    "default": null,
+                    "required": true
+                },
+                "below_method": {
+                    "type": "<class 'str'>",
+                    "default": null,
+                    "required": false
+                },
+                "replace_method": {
+                    "type": "<class 'str'>",
+                    "default": null,
+                    "required": false
+                },
+                "module_path": {
+                    "type": "<class 'str'>",
+                    "default": "protopy/resources/unassigned.py",
+                    "required": false
+                }
+            }
+        },
+        "body": "def add_python_method(self, *args,\n                          content: str,\n                          below_method: str = None,\n                          replace_method: str = None,\n                          module_path: str = 'protopy/resources/unassigned.py',\n                          **kwargs\n        ) -> dict:\n        \"\"\"\n        Inserts or overwrites a python class method in a given python module. Use to extend\n        or modify existing classes in the python module.\n        Args:\n            content (str):  The Python code for the new method to be inserted\n                            or used as a replacement.\n            below_method (str, optional):   Method name to insert the new content after. \n                                            The content will be added below this method.\n            replace_method (str, optional): Method name an existing method to be replaced. \n                                            For new methods, set to None.\n            module_path (str):  Path to the Python module file. Always try to provide this!\n                                If not provided, content will be added to a unassigned bucket.\n        Returns:\n            dict: status = {'status': True/False, 'body': message}\n        \"\"\"\n        # derive a location in the target class to insert the new method\n        if not below_method and not replace_method:\n            return {'status': False, 'body': 'Provide below_method or replace_method!'}\n        # module_path must be a valid file\n        if not os.path.isfile(module_path):\n            return {'status': False, 'body': f\"File not in {module_path}\"}\n        # read the original code to be modified\n        with open(module_path, 'r') as file:\n            code = file.read()\n        # either below_method or replace_method must be provided\n        # verify that the below_method method exists\n        if below_method and ( below_method not in code ):\n            return {'status': False, 'body': f\"Method {below_method} not in {module_path}\"}\n        # verify that the replace_method method exists\n        if replace_method and ( replace_method not in code ):\n            return {'status': False, 'body': f\"Method {replace_method} not in {module_path}\"}\n        # get the indices for modification\n        indexs = self._get_indexs_from_text(code, below_method, replace_method)\n        # modify the module\n        # The content has to adhere to our modified PEP8\n        # black.format_file_in_place(module_name, write_back=black.WriteBack.CHECK)\n        status_msg = self._modify_python_module( *args,\n                                                content=content,\n                                                content_meta=indexs,\n                                                module_path=module_path,\n                                                **kwargs\n        )\n        return {'status': True, 'body': status_msg}",
+        "returns": "<class 'dict'>",
+        "example": "@f_json.open_ai_function(apis={\"open_ai_api_\",}, write=True,)\n    def test_add_python_method(self):\n        \"\"\"\n        This is an example on how to use add_python_method.\n        \"\"\"\n        system = CodeFile()\n        module_name = 'test_add_python_method.py'\n        module_dir = os.path.relpath(self.test_create_python_module_dir, sts.project_dir)\n        \n        # Initial content for the module\n        initial_code = \"\"\"\n    def existing_method():\n        return 'Existing method!'\n\n    def another_method():\n        return 'Another method!'\n\"\"\"\n        \n        # New method to add\n        new_method_content = \"\"\"\n        def new_method():\n            return 'New method!'\n\"\"\"\n        \n        # Replace method content\n        replace_method_content = \"\"\"\n    def replaced_existing_method():\n        return 'Replaced method!'\n\"\"\"\n        \n        # Create the initial python module\n        r = system.create_python_module(\n            module_name=module_name,\n            module_dir=module_dir,\n            content=initial_code\n        )\n        self.assertTrue(r.get('status'))\n        \n        # Test inserting a new method after existing_method\n        r = system.add_python_method(\n            content=new_method_content,\n            below_method='existing_method',\n            replace_method=None,\n            module_path=os.path.join(module_dir, module_name)\n        )\n        self.assertTrue(r.get('status'))\n        self.assertTrue(r.get('status'))\n        \n        # Check if the new method was inserted correctly\n        with open(os.path.join(sts.project_dir, module_dir, module_name), 'r') as f:\n            content = f.read()\n        self.assertIn(new_method_content.split('\\n')[0].strip(), content)\n        \n        # Test replacing the existing method\n        r = system.add_python_method(\n            content=replace_method_content,\n            below_method=None,\n            replace_method='existing_method',\n            module_path=os.path.join(module_dir, module_name)\n        )\n        self.assertTrue(r.get('status'))\n        \n        # Check if the method was replaced correctly\n        with open(os.path.join(sts.project_dir, module_dir, module_name), 'r') as f:\n            content = f.read()\n        self.assertIn(replace_method_content.strip(), content)\n        \n        # Print the final content of the module for verification\n        self.assertNotIn(\"return 'Existing method!'\", content)\n        code = '\\n'.join([f\"{i:<3}:{l}\" for i, l in enumerate(content.split('\\n'), 1)])"
+    },
+    "open_ai_api_": {
+        "name": "CodeFile.add_python_method",
+        "description": "\n        Inserts or overwrites a python class method in a given python module. Use to extend\n        or modify existing classes in the python module.\n        Args:\n            content (str):  The Python code for the new method to be inserted\n                            or used as a replacement.\n            below_method (str, optional):   Method name to insert the new content after. \n                                            The content will be added below this method.\n            replace_method (str, optional): Method name an existing method to be replaced. \n                                            For new methods, set to None.\n            module_path (str):  Path to the Python module file. Always try to provide this!\n                                If not provided, content will be added to a unassigned bucket.\n        Returns:\n            dict: status = {'status': True/False, 'body': message}\n        ",
+        "import": "protopy.helpers.sys_exec.code_file",
+        "module_path": "C:\\Users\\lars\\python_venvs\\libs\\protolib\\protopy\\helpers\\sys_exec\\code_file.py",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "content": {
+                    "type": "string",
+                    "default": null,
+                    "enum": []
+                },
+                "below_method": {
+                    "type": "string",
+                    "default": null,
+                    "enum": []
+                },
+                "replace_method": {
+                    "type": "string",
+                    "default": null,
+                    "enum": []
+                },
+                "module_path": {
+                    "type": "string",
+                    "default": "protopy/resources/unassigned.py"
+                }
+            },
+            "required": [
+                "content"
+            ]
+        },
+        "body": "def add_python_method(self, *args,\n                          content: str,\n                          below_method: str = None,\n                          replace_method: str = None,\n                          module_path: str = 'protopy/resources/unassigned.py',\n                          **kwargs\n        ) -> dict:\n        \"\"\"\n        Inserts or overwrites a python class method in a given python module. Use to extend\n        or modify existing classes in the python module.\n        Args:\n            content (str):  The Python code for the new method to be inserted\n                            or used as a replacement.\n            below_method (str, optional):   Method name to insert the new content after. \n                                            The content will be added below this method.\n            replace_method (str, optional): Method name an existing method to be replaced. \n                                            For new methods, set to None.\n            module_path (str):  Path to the Python module file. Always try to provide this!\n                                If not provided, content will be added to a unassigned bucket.\n        Returns:\n            dict: status = {'status': True/False, 'body': message}\n        \"\"\"\n        # derive a location in the target class to insert the new method\n        if not below_method and not replace_method:\n            return {'status': False, 'body': 'Provide below_method or replace_method!'}\n        # module_path must be a valid file\n        if not os.path.isfile(module_path):\n            return {'status': False, 'body': f\"File not in {module_path}\"}\n        # read the original code to be modified\n        with open(module_path, 'r') as file:\n            code = file.read()\n        # either below_method or replace_method must be provided\n        # verify that the below_method method exists\n        if below_method and ( below_method not in code ):\n            return {'status': False, 'body': f\"Method {below_method} not in {module_path}\"}\n        # verify that the replace_method method exists\n        if replace_method and ( replace_method not in code ):\n            return {'status': False, 'body': f\"Method {replace_method} not in {module_path}\"}\n        # get the indices for modification\n        indexs = self._get_indexs_from_text(code, below_method, replace_method)\n        # modify the module\n        # The content has to adhere to our modified PEP8\n        # black.format_file_in_place(module_name, write_back=black.WriteBack.CHECK)\n        status_msg = self._modify_python_module( *args,\n                                                content=content,\n                                                content_meta=indexs,\n                                                module_path=module_path,\n                                                **kwargs\n        )\n        return {'status': True, 'body': status_msg}",
+        "returns": "<class 'dict'>",
+        "example": "@f_json.open_ai_function(apis={\"open_ai_api_\",}, write=True,)\n    def test_add_python_method(self):\n        \"\"\"\n        This is an example on how to use add_python_method.\n        \"\"\"\n        system = CodeFile()\n        module_name = 'test_add_python_method.py'\n        module_dir = os.path.relpath(self.test_create_python_module_dir, sts.project_dir)\n        \n        # Initial content for the module\n        initial_code = \"\"\"\n    def existing_method():\n        return 'Existing method!'\n\n    def another_method():\n        return 'Another method!'\n\"\"\"\n        \n        # New method to add\n        new_method_content = \"\"\"\n        def new_method():\n            return 'New method!'\n\"\"\"\n        \n        # Replace method content\n        replace_method_content = \"\"\"\n    def replaced_existing_method():\n        return 'Replaced method!'\n\"\"\"\n        \n        # Create the initial python module\n        r = system.create_python_module(\n            module_name=module_name,\n            module_dir=module_dir,\n            content=initial_code\n        )\n        self.assertTrue(r.get('status'))\n        \n        # Test inserting a new method after existing_method\n        r = system.add_python_method(\n            content=new_method_content,\n            below_method='existing_method',\n            replace_method=None,\n            module_path=os.path.join(module_dir, module_name)\n        )\n        self.assertTrue(r.get('status'))\n        self.assertTrue(r.get('status'))\n        \n        # Check if the new method was inserted correctly\n        with open(os.path.join(sts.project_dir, module_dir, module_name), 'r') as f:\n            content = f.read()\n        self.assertIn(new_method_content.split('\\n')[0].strip(), content)\n        \n        # Test replacing the existing method\n        r = system.add_python_method(\n            content=replace_method_content,\n            below_method=None,\n            replace_method='existing_method',\n            module_path=os.path.join(module_dir, module_name)\n        )\n        self.assertTrue(r.get('status'))\n        \n        # Check if the method was replaced correctly\n        with open(os.path.join(sts.project_dir, module_dir, module_name), 'r') as f:\n            content = f.read()\n        self.assertIn(replace_method_content.strip(), content)\n        \n        # Print the final content of the module for verification\n        self.assertNotIn(\"return 'Existing method!'\", content)\n        code = '\\n'.join([f\"{i:<3}:{l}\" for i, l in enumerate(content.split('\\n'), 1)])"
+    }
+}

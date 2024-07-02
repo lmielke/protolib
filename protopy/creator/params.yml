@@ -1,0 +1,23 @@
+# archive.yml
+# archives files and folders, call like: python -m pymagico archive -m 'message'
+name: archive
+# path to package top folder, if app is package then  __init__.py should be one level below
+# test: cd appPath --> then run cmds
+defaultSources: 
+  - sts.project_dir
+# mandatory calling arguments for subprocess to be run
+defaultTargets:
+  - C:/
+# paths not to be archived
+ignore_dirs:
+  - /\.git.*
+  - /.*\.egg-info
+  - /__pycache__
+  - /\.pytest_cache
+  - /\.tox
+  - /build
+  - /builds
+  - /dist
+  - /env
+  - /\.virtualenvs
+  - /creator

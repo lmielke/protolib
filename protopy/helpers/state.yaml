@@ -1,0 +1,22 @@
+docker_info:
+  last_update: '2024-07-02T15:27:26.886411'
+  value: "\n\e[33m################### proto info -i DOCKER ###################\e[0m\n\
+    \e[31mDocker not running! e = CalledProcessError(1, 'docker info')\n\e[0m"
+get_os_info:
+  last_update: '2024-07-02T14:22:51.488718'
+  value:
+    Available Physical Memory: 6.549 MB
+    Boot Device: /Device/HarddiskVolume2
+    Hyper-V Requirements: A hypervisor has been detected. Features required for Hyper-V
+      will not be displayed.
+    OS Manufacturer: Microsoft Corporation
+    OS Name: Microsoft Windows 10 Pro
+    OS Version: 10.0.19045 N/A Build 19045
+    PowerShell Version: 'Microsoft.Powershell_profile.ps1 l214 scriptRoot: C:/Users/lars/OneDrive/Documents/WindowsPowerShell
+      Call count path: C:/Users/lars/OneDrive/Documents/WindowsPowerShell/CallCount.json
+      Major Minor Build Revision 5 1 19041 4522'
+    Processor(s): 1 Processor(s) Installed.
+    System Manufacturer: Acer
+    System Model: Predator PH317-53
+    System Type: x64-based PC
+    Total Physical Memory: 16.223 MB

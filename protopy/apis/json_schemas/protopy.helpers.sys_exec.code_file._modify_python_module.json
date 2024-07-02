@@ -1,0 +1,63 @@
+{
+    "base": {
+        "name": "CodeFile._modify_python_module",
+        "description": "\n        Modifies a existing python codebase by inserting/replacing coding at specified indices\n        within the target module.\n\n        Args:\n            content (str): The Python code to be inserted.\n            indexs (tuple): A tuple with start and end indices to define where to insert \n                            the content. If only one index is provided, \n                            the content will be inserted after that index.\n                            If start and end are provided, the range will be overwritten.\n            module_path (str): The path to the Python module to be modified.\n\n        Returns:\n            bool: True if the modification is successful, False otherwise.\n        ",
+        "import": "protopy.helpers.sys_exec.code_file",
+        "module_path": "C:\\Users\\lars\\python_venvs\\libs\\protolib\\protopy\\helpers\\sys_exec\\code_file.py",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "self": {
+                    "type": "object",
+                    "default": null,
+                    "required": true
+                },
+                "content": {
+                    "type": "<class 'str'>",
+                    "default": null,
+                    "required": true
+                },
+                "all_defs": {
+                    "type": "<class 'dict'>",
+                    "default": null,
+                    "required": true
+                },
+                "module_path": {
+                    "type": "<class 'str'>",
+                    "default": null,
+                    "required": true
+                }
+            }
+        },
+        "body": "def _modify_python_module(self, *args,   content:str,\n                                            all_defs:dict, \n                                            module_path:str, **kwargs\n        ) -> bool:\n        \"\"\"\n        Modifies a existing python codebase by inserting/replacing coding at specified indices\n        within the target module.\n\n        Args:\n            content (str): The Python code to be inserted.\n            indexs (tuple): A tuple with start and end indices to define where to insert \n                            the content. If only one index is provided, \n                            the content will be inserted after that index.\n                            If start and end are provided, the range will be overwritten.\n            module_path (str): The path to the Python module to be modified.\n\n        Returns:\n            bool: True if the modification is successful, False otherwise.\n        \"\"\"\n        # get idx\n        indexs = all_defs.get('ref_ix')\n        # Check if module_path is a valid file\n        if not os.path.isfile(module_path):\n            return f\"Invalid path: {module_path}\"\n        # Read the source code\n        with open(module_path, 'r') as f:\n            lines = f.read().split('\\n')\n        # Adjust conditional index start and end points\n        start, end = self._veryfy_indexs(indexs, *args, **kwargs)\n        # Split the code into blocks and properly indent content\n        # The content has to adhere to our modified PEP8\n        # black.format_file_in_place(module_name, write_back=black.WriteBack.CHECK)\n        indent = re.search(r'^(\\s*)(def\\s+\\w+)', content).group(1).count(' ')\n        ref_indent = all_defs[all_defs['ref_method']]['indent']\n        content = '\\n'.join([l.replace(' '*indent, ' '*ref_indent, 1) for l in content.split('\\n')])\n        content = content.rstrip('\\n')\n        blocks = [lines[ :start], [content], lines[end: ]]\n        with open(module_path, 'w') as f:\n            f.write('\\n'.join(['\\n'.join(block) for block in blocks]))\n        return True",
+        "returns": "<class 'bool'>",
+        "example": "@f_json.open_ai_function(apis={\"open_ai_api_\",}, write=True,)\n    def test__modify_python_module(self):\n        \"\"\"\n        This is an example on how to use modify_python_module.\n        \"\"\"\n        system = CodeFile()\n        module_name = 'test__modify_python_module.py'\n        module_dir = os.path.relpath(self.test_create_python_module_dir, sts.project_dir)\n        \n        # Initial content for the module\n        initial_code = \"\"\"\n    def single_method():\n        return 'Single method!'\n    \"\"\"\n        \n        # Content to insert\n        insert_content = \"\"\"\n    \"\"\"\n        \n        # Create the initial python module\n        r = system.create_python_module(\n            module_name=module_name,\n            module_dir=module_dir,\n            content=initial_code\n        )\n        self.assertTrue(r.get('status'))\n        \n        # Test cases for different indices\n        test_cases = [\n            (2, ),\n            (2, None),\n            (2, 2),\n            (2, 3),\n            (2, 4)\n        ]\n        \n        for indexs in test_cases:\n            with self.subTest(indexs=indexs):\n                success = system._modify_python_module(\n                                            content=insert_content,\n                                            indexs=indexs,\n                                            module_path=os.path.join(module_dir, module_name)\n                )\n                self.assertTrue(success)\n                \n                # Check if the content was inserted correctly\n                with open(os.path.join(sts.project_dir, module_dir, module_name), 'r') as f:\n                    content = f.read()\n                self.assertIn(insert_content.strip(), content)\n                \n                # Print the final content of the module for verification\n                code = '\\n'.join([f\"{i:<3}:{l}\" for i, l in enumerate(content.split('\\n'), 1)])"
+    },
+    "open_ai_api_": {
+        "name": "CodeFile._modify_python_module",
+        "description": "\n        Modifies a existing python codebase by inserting/replacing coding at specified indices\n        within the target module.\n\n        Args:\n            content (str): The Python code to be inserted.\n            indexs (tuple): A tuple with start and end indices to define where to insert \n                            the content. If only one index is provided, \n                            the content will be inserted after that index.\n                            If start and end are provided, the range will be overwritten.\n            module_path (str): The path to the Python module to be modified.\n\n        Returns:\n            bool: True if the modification is successful, False otherwise.\n        ",
+        "import": "protopy.helpers.sys_exec.code_file",
+        "module_path": "C:\\Users\\lars\\python_venvs\\libs\\protolib\\protopy\\helpers\\sys_exec\\code_file.py",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "content": {
+                    "type": "string",
+                    "default": null,
+                    "enum": []
+                },
+                "module_path": {
+                    "type": "string",
+                    "default": null
+                }
+            },
+            "required": [
+                "content",
+                "module_path"
+            ]
+        },
+        "body": "def _modify_python_module(self, *args,   content:str,\n                                            all_defs:dict, \n                                            module_path:str, **kwargs\n        ) -> bool:\n        \"\"\"\n        Modifies a existing python codebase by inserting/replacing coding at specified indices\n        within the target module.\n\n        Args:\n            content (str): The Python code to be inserted.\n            indexs (tuple): A tuple with start and end indices to define where to insert \n                            the content. If only one index is provided, \n                            the content will be inserted after that index.\n                            If start and end are provided, the range will be overwritten.\n            module_path (str): The path to the Python module to be modified.\n\n        Returns:\n            bool: True if the modification is successful, False otherwise.\n        \"\"\"\n        # get idx\n        indexs = all_defs.get('ref_ix')\n        # Check if module_path is a valid file\n        if not os.path.isfile(module_path):\n            return f\"Invalid path: {module_path}\"\n        # Read the source code\n        with open(module_path, 'r') as f:\n            lines = f.read().split('\\n')\n        # Adjust conditional index start and end points\n        start, end = self._veryfy_indexs(indexs, *args, **kwargs)\n        # Split the code into blocks and properly indent content\n        # The content has to adhere to our modified PEP8\n        # black.format_file_in_place(module_name, write_back=black.WriteBack.CHECK)\n        indent = re.search(r'^(\\s*)(def\\s+\\w+)', content).group(1).count(' ')\n        ref_indent = all_defs[all_defs['ref_method']]['indent']\n        content = '\\n'.join([l.replace(' '*indent, ' '*ref_indent, 1) for l in content.split('\\n')])\n        content = content.rstrip('\\n')\n        blocks = [lines[ :start], [content], lines[end: ]]\n        with open(module_path, 'w') as f:\n            f.write('\\n'.join(['\\n'.join(block) for block in blocks]))\n        return True",
+        "returns": "<class 'bool'>",
+        "example": "@f_json.open_ai_function(apis={\"open_ai_api_\",}, write=True,)\n    def test__modify_python_module(self):\n        \"\"\"\n        This is an example on how to use modify_python_module.\n        \"\"\"\n        system = CodeFile()\n        module_name = 'test__modify_python_module.py'\n        module_dir = os.path.relpath(self.test_create_python_module_dir, sts.project_dir)\n        \n        # Initial content for the module\n        initial_code = \"\"\"\n    def single_method():\n        return 'Single method!'\n    \"\"\"\n        \n        # Content to insert\n        insert_content = \"\"\"\n    \"\"\"\n        \n        # Create the initial python module\n        r = system.create_python_module(\n            module_name=module_name,\n            module_dir=module_dir,\n            content=initial_code\n        )\n        self.assertTrue(r.get('status'))\n        \n        # Test cases for different indices\n        test_cases = [\n            (2, ),\n            (2, None),\n            (2, 2),\n            (2, 3),\n            (2, 4)\n        ]\n        \n        for indexs in test_cases:\n            with self.subTest(indexs=indexs):\n                success = system._modify_python_module(\n                                            content=insert_content,\n                                            indexs=indexs,\n                                            module_path=os.path.join(module_dir, module_name)\n                )\n                self.assertTrue(success)\n                \n                # Check if the content was inserted correctly\n                with open(os.path.join(sts.project_dir, module_dir, module_name), 'r') as f:\n                    content = f.read()\n                self.assertIn(insert_content.strip(), content)\n                \n                # Print the final content of the module for verification\n                code = '\\n'.join([f\"{i:<3}:{l}\" for i, l in enumerate(content.split('\\n'), 1)])"
+    }
+}
