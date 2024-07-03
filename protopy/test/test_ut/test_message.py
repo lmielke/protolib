@@ -55,7 +55,13 @@ class Test_Message(unittest.TestCase):
         # content is tested inside content dataclass
         # del message_dict['content']
         # Verify the structure and content of the dictionary
-        self.assertTrue(set(message_dict.keys()).issubset({'name', 'content', 'watermark', 'role', 'mId'}))
+        self.assertTrue(set(message_dict.keys()).issubset({'name',
+                                                            'content',
+                                                            'watermark',
+                                                            'role',
+                                                            'mType',
+                                                            'mId'}
+                                                ))
 
     def test_to_table(self):
         # Prepare a Content instance

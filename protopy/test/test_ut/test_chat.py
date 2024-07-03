@@ -144,7 +144,7 @@ class Test_Chat(unittest.TestCase):
         # Check that the chat is loaded correctly
         self.assertIsNotNone(ch)
         self.assertEqual(len(ch.messages), 3)
-        self.assertEqual(ch.messages[-1].content.text, '\x1b[31mTester:\x1b[0m  Testing save.')
+        self.assertEqual(ch.messages[-1].content.text, 'Testing save.')
 
 
 if __name__ == "__main__":

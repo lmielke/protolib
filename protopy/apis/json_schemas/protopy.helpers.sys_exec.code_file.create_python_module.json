@@ -3,7 +3,7 @@
         "name": "CodeFile.create_python_module",
         "description": "\n        Writes/Overwrites an entire Python module file with content:str (valid python code) \n        in a subdirectory of `sts.project_dir`. PEP8 must be followed.\n        Args:\n            content (str): The Python code to be written to the file.\n                Example: see modified PEP8 info section.\n            module_name (str): The name of the Python file to be created.\n                Examples:\n                - 'settings.py'\n                - 'chat.py'\n            module_dir (str, optional): The relative directory path from `sts.project_dir` \n                                        where the file will be created.\n                                        Defaults to `sts.project_dir/resources` if not provided.\n\n        Returns:\n            dict: status = {'status': True/False, 'body': message}\n        ",
         "import": "protopy.helpers.sys_exec.code_file",
-        "module_path": "C:\\Users\\lars\\python_venvs\\libs\\protolib\\protopy\\helpers\\sys_exec\\code_file.py",
+        "module_path": "c:\\users\\lars\\python_venvs\\libs\\protolib\\protopy\\helpers\\sys_exec\\code_file.py",
         "parameters": {
             "type": "object",
             "properties": {
@@ -19,7 +19,7 @@
                 },
                 "module_name": {
                     "type": "<class 'str'>",
-                    "default": "2024-07-02-15-27-13-213216_un_named.py",
+                    "default": "2024-07-03-17-42-01-030117_un_named.py",
                     "required": false
                 },
                 "module_dir": {
@@ -37,7 +37,7 @@
         "name": "CodeFile.create_python_module",
         "description": "\n        Writes/Overwrites an entire Python module file with content:str (valid python code) \n        in a subdirectory of `sts.project_dir`. PEP8 must be followed.\n        Args:\n            content (str): The Python code to be written to the file.\n                Example: see modified PEP8 info section.\n            module_name (str): The name of the Python file to be created.\n                Examples:\n                - 'settings.py'\n                - 'chat.py'\n            module_dir (str, optional): The relative directory path from `sts.project_dir` \n                                        where the file will be created.\n                                        Defaults to `sts.project_dir/resources` if not provided.\n\n        Returns:\n            dict: status = {'status': True/False, 'body': message}\n        ",
         "import": "protopy.helpers.sys_exec.code_file",
-        "module_path": "C:\\Users\\lars\\python_venvs\\libs\\protolib\\protopy\\helpers\\sys_exec\\code_file.py",
+        "module_path": "c:\\users\\lars\\python_venvs\\libs\\protolib\\protopy\\helpers\\sys_exec\\code_file.py",
         "parameters": {
             "type": "object",
             "properties": {
@@ -48,7 +48,7 @@
                 },
                 "module_name": {
                     "type": "string",
-                    "default": "2024-07-02-15-27-13-213216_un_named.py",
+                    "default": "2024-07-03-17-42-01-030117_un_named.py",
                     "enum": [
                         "'settings.py'",
                         "'chat.py'"

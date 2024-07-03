@@ -24,7 +24,8 @@ class Chat:
     messages: List[Message] = field(default_factory=list)
     use_tags: bool = True # controlls if the tags are shown in the chat instructions
     use_names: bool = True # controlls if the names of the experts are shown in the chat
-    mId: int = None
+    chId:str = re.sub(r"([: .])", r"-" , str(dt.now()))
+    chType:str = '_Chat'
 
     def __post_init__(self, *args, **kwargs) -> None:
         # self.readme = self.load_readme()
@@ -61,37 +62,45 @@ class Chat:
         self.template = Template(self, *args, t_name=t_name, **kwargs,)
         # adds Chat specific context to the template context
         self.instructs += '\n' + self.template.load(context, *args, **kwargs)
-        self.add_instructions(self.instructs, *args, **kwargs)
+        self.add_instructions(  self.instructs, *args, 
+                                mType=f"instructs{self.chType}", 
+                                **kwargs,
+        )
 
     def load_infos(self, *args, **kwargs):
         """
         Every task requires a different set of instructs for different experts. 
         This function reads the instructs for the expert and returns it.
         """
-        # t_name = self.create_t_name(*args, **kwargs)
-        # context = {'infos': self.infos}
         self.template = Template(InfoSys(self), *args, t_name='', **kwargs,)
-        infos = self.template.load({}, *args, **kwargs)
+        info_text = self.template.load({}, *args, **kwargs)
         # adds Chat specific context to the template context
-        self.add_instructions(infos, *args, **kwargs)
+        self.add_instructions(info_text, *args, mType=f"infos{self.chType}", **kwargs)
 
-    def get_model_response(self, *args, role:str='assistant', to_chat:bool=False, **kwargs):
+    def get_model_response(self, *args, role:str='assistant', to_chat:bool=True, **kwargs):
         self.prompt(*args, **kwargs)
-        message = Message(  name=self.owner.name,
+        message = Message(
+                            name=self.owner.name, 
                             role=role, 
+                            mId=self.chId,
+                            mType='assi_response',
                             **self._organize(*args, **kwargs))
-        if to_chat:
-            self.append(message)
+        if to_chat: self.append(message, *args, **kwargs)
         return message
 
-    def add_instructions(self, instructs, *args, tag='chat', **kwargs):
+    def add_instructions(self,  instructs, *args, 
+                                tag='chat', mId:str=None, mType:str=None, **kwargs
+        ) -> Message:
+        """
+        Adds chat instructions to the chat.
+        """
         if not instructs: return None
-        # first chat message only contains instructs
         self.messages.append(Message(
-                        name=sts.sudo, # instructions are only given by sudo
-                        content=Content(text='', tag=tag, instructs=instructs),
-                        role='system', # role is 'system' for instructions
-                        # mId=self.messages[-1].mId + 1 if self.messages else 0
+                                    name=sts.sudo, # instructions are only given by sudo
+                                    content=Content(text='', tag=tag, instructs=instructs),
+                                    role='system', # role is 'system' for instructions
+                                    mId=mId,
+                                    mType=mType,
                             )
         )
 
@@ -99,26 +108,20 @@ class Chat:
 
     def append(self, message: [Message, str, None], *args, role:str=None, **kwargs) -> None:
         """Appends a message to the chat."""
-        message = Message(
-                            name=self.owner.name,
-                            content=message,
-                            role=role if role is not None else self.owner.role,
-                            )
-        self.set_mid(len(self.messages) if self.messages else 0)
+        if not isinstance(message, Message):
+            message = Message(
+                                name=self.owner.name,
+                                content=message,
+                                role=role if role is not None else self.owner.role,
+                                )
         self.messages.append(message)
+        return self.messages[-1]
 
-    def set_mid(self, mId:int=None, *args, **kwargs) -> None:
-        """
-        Each message gets an Id to be able to reference it later in the conversation.
-        """
-        
-        self.mId = self.mId if mId is None else mId
-        # self.content.mId = self.mId
-
-    def remove(self, mId:int=None, *args, **kwargs) -> None:
+    def remove(self, mId:str, *args, **kwargs) -> None:
         """Gets the last message from messages and sets content to 'post removed'."""
-        mId = -1 if mId is None else mId
-        self.messages[mId].content.text = 'post removed'
+        for m in self.messages:
+            if m.mId == mId:
+                m.mType = 'removed'
 
     def __str__(self, *args, **kwargs) -> str:
         """String representation of the chat, showing all messages."""

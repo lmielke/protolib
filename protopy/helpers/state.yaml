@@ -1,11 +1,11 @@
 docker_info:
-  last_update: '2024-07-02T15:27:26.886411'
+  last_update: '2024-07-03T17:42:07.391121'
   value: "\n\e[33m################### proto info -i DOCKER ###################\e[0m\n\
     \e[31mDocker not running! e = CalledProcessError(1, 'docker info')\n\e[0m"
 get_os_info:
-  last_update: '2024-07-02T14:22:51.488718'
+  last_update: '2024-07-03T16:27:48.632340'
   value:
-    Available Physical Memory: 6.549 MB
+    Available Physical Memory: 9.503 MB
     Boot Device: /Device/HarddiskVolume2
     Hyper-V Requirements: A hypervisor has been detected. Features required for Hyper-V
       will not be displayed.

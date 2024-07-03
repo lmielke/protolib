@@ -3,7 +3,7 @@
         "name": "CodeFile.add_python_method",
         "description": "\n        Inserts or overwrites a python class method in a given python module. Use to extend\n        or modify existing classes in the python module.\n        Args:\n            content (str):  The Python code for the new method to be inserted\n                            or used as a replacement.\n            below_method (str, optional):   Method name to insert the new content after. \n                                            The content will be added below this method.\n            replace_method (str, optional): Method name an existing method to be replaced. \n                                            For new methods, set to None.\n            module_path (str):  Path to the Python module file. Always try to provide this!\n                                If not provided, content will be added to a unassigned bucket.\n        Returns:\n            dict: status = {'status': True/False, 'body': message}\n        ",
         "import": "protopy.helpers.sys_exec.code_file",
-        "module_path": "C:\\Users\\lars\\python_venvs\\libs\\protolib\\protopy\\helpers\\sys_exec\\code_file.py",
+        "module_path": "c:\\users\\lars\\python_venvs\\libs\\protolib\\protopy\\helpers\\sys_exec\\code_file.py",
         "parameters": {
             "type": "object",
             "properties": {
@@ -42,7 +42,7 @@
         "name": "CodeFile.add_python_method",
         "description": "\n        Inserts or overwrites a python class method in a given python module. Use to extend\n        or modify existing classes in the python module.\n        Args:\n            content (str):  The Python code for the new method to be inserted\n                            or used as a replacement.\n            below_method (str, optional):   Method name to insert the new content after. \n                                            The content will be added below this method.\n            replace_method (str, optional): Method name an existing method to be replaced. \n                                            For new methods, set to None.\n            module_path (str):  Path to the Python module file. Always try to provide this!\n                                If not provided, content will be added to a unassigned bucket.\n        Returns:\n            dict: status = {'status': True/False, 'body': message}\n        ",
         "import": "protopy.helpers.sys_exec.code_file",
-        "module_path": "C:\\Users\\lars\\python_venvs\\libs\\protolib\\protopy\\helpers\\sys_exec\\code_file.py",
+        "module_path": "c:\\users\\lars\\python_venvs\\libs\\protolib\\protopy\\helpers\\sys_exec\\code_file.py",
         "parameters": {
             "type": "object",
             "properties": {

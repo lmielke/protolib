@@ -11,11 +11,12 @@ from protopy.helpers.sys_info.os_info import get_os_info
 from protopy.helpers.application_logger.application_info import ApplicationInfo
 from protopy.helpers.sys_info.user_info import Userhistory
 from protopy.helpers.sys_info.import_info import main as import_info
+import protopy.helpers.sys_info.git_diff as git_diff
 from protopy.helpers.sys_info.package_info import pipenv_is_active, pipenv_info
 
 from protopy.helpers.sys_state import state_cache
 
-all_infos = {"os", "network", "python", "package", "project", "docker", "os_activity", "ps_history"}
+all_infos = {"git_diff", "os", "network", "python", "package", "project", "docker", "os_activity", "ps_history"}
 info_list = []
 
 def collect_infos(msg:str, *args, init:bool=None, **kwargs):
@@ -40,6 +41,15 @@ def get_infos(*args, verbose, infos: set = None, **kwargs):
         python_info(*args, **kwargs)
     if verbose >= 3 or ("docker" in infos):
         collect_infos(docker_info(*args, **kwargs))
+    if verbose >= 3 or ("git_diff" in infos):
+        collect_infos(git_diff.main(    *args,
+                                        startDir=sts.project_dir, 
+                                        days=1, 
+                                        projectName='protolib',
+                                        verbose=0,
+                                        **kwargs,
+                    )
+        )
     if verbose >= 1 or ("os_activity" in infos):
         collect_infos(f"""\n{sts.YELLOW}{f" proto info -i os_activity ":#^60}{sts.ST_RESET}""")
         file_name, log = ApplicationInfo.load_log_file('today', *args, **kwargs)

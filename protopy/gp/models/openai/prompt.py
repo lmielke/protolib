@@ -31,33 +31,44 @@ class Prompt:
         # prompt uses default model using __call__, or a specifc model using mk_prompt()
         self.d_assi = d_assi if d_assi is not None else self.owner.d_assi if hasattr(self.owner, 'd_assi') else None
         self.assi = Assistant(*args, d_assi=self.d_assi, **kwargs)
-        self.send_object = {}
+        self.context = {}
         self.msg = lambda role, content: {'role': role, 'content': content}
 
     def __call__(self, *args, **kwargs):
         self.mk_prompt(*args, **kwargs)
-        self.response(self.assi.post(self.send_object, *args, **kwargs), *args, **kwargs )
+        self.to_table(*args, **kwargs)
+        self.response(self.assi.post(self.context, *args, **kwargs), *args, **kwargs )
         return self.response.__dict__
+
+    def to_table(self, *args, verbose:int=0, **kwargs):
+        if verbose:
+            t = [m.values() for m in self.context['messages']]
+            tbl = tb(t, headers=['role', 'content'])
+            print(f"Prompt.to_table: \n{tbl}")
 
     def mk_prompt(self, *args, model:str=None, tmp:float=None, **kwargs):
         """
         Creates a prompt using the OpenAI API and sends it to the OpenAI API.
         Model and temperature (tmp) can be set here or are taken from prompt instance.
         """
-        self.send_object['temperature'] = self.assi.temperature if tmp is None else tmp
-        self.send_object['model'] = self.assi.model
-        self.send_object['messages'] = self.prep_messages(*args, **kwargs)
+        self.context['temperature'] = self.assi.temperature if tmp is None else tmp
+        self.context['model'] = self.assi.model
+        self.context['messages'] = self.prep_messages(*args, **kwargs)
         self.add_tools(*args, **kwargs)
 
     def prep_messages(self, *args, verbose:int=0, single_shot:bool=False, **kwargs):
-        M, q_role = [], None
+        M, q_role, start = [], None, True
         for vs in self.owner.to_dict(*args, **kwargs).values():
-            if vs['role'] == 'user':
-                content = hlp.add_tags(vs['content'], self.assi.tag)
-            else:
-                content = vs['content']
-            M.append( self.msg(vs['role'], content) )
-            q_role = vs['role']
+            for n, v in vs.items():
+                if n == 'role':
+                    role = gp_sts.add_tags(self.assi.tag, v, n)
+                    if start:
+                        role = gp_sts.add_tags(self.assi.tag, role, 'start')
+                elif n == 'content':
+                    content = gp_sts.add_tags(self.assi.tag, v, n)
+            M.append( self.msg(role, content) )
+            q_role = role
+        M.append( self.msg('<|start_header_id|>assistant<|end_header_id|>', ''))
         if single_shot:
             content = tb([[msg.get('content')] for msg in M])
             M = [ {'role': q_role, 'content': content}, ]
@@ -67,10 +78,10 @@ class Prompt:
 
     def add_tools(self, *args, function:str='none', **kwargs):
         if function in ['none', 'auto']:
-            self.send_object['tool_choice'] = function
-            self.send_object['tools'] = self.response.function.get_function_data(*args, **kwargs)
+            self.context['tool_choice'] = function
+            self.context['tools'] = self.response.function.get_function_data(*args, **kwargs)
         elif type(function) == str:
-            self.send_object.update({"type": "function", "function": {"name": function}})
+            self.context.update({"type": "function", "function": {"name": function}})
 
 
 class Response:
@@ -165,7 +176,7 @@ class Assistant:
             raise ValueError(msg)
         return gp_sts.default_model, None, gp_sts.d_assi
 
-    def post(self, send_obj: dict, *args, verbose: int = 0, **kwargs) -> dict:
+    def post(self, context: dict, *args, verbose: int = 0, **kwargs) -> dict:
         """
         Sends message to the appropriate assistant and handles the response.
         """
@@ -181,20 +192,20 @@ class Assistant:
             method_name = '_'.join(self.host.split('_')[:-1])
         else:
             method_name = self.host
-        return getattr(self, method_name)(send_obj)
+        return getattr(self, method_name)(context)
 
-    def while_ai(self, send_obj: dict, *args, model:str=None, **kwargs) -> dict:
+    def while_ai(self, context: dict, *args, model:str=None, **kwargs) -> dict:
         """
         Handles communication with a custom AI assistant.
         While-ai-0 hosts the large models and while-ai-1 the smaller models.
         """
-        send_obj['stream'] = False
-        send_obj['prompt'] = send_obj['messages'][0]['content']
-        if model == 'd3k': send_object['num_ctx'] = 256000
+        context['stream'] = False
+        context['prompt'] = context['messages'][0]['content']
+        if model == 'd3k': context['num_ctx'] = 256000
         r = requests.post(
                             gp_sts.models[self.host]['meta']['model_address'],
                             headers={'Content-Type': 'application/json'},
-                            data=json.dumps(send_obj)
+                            data=json.dumps(context)
         )
         r.raise_for_status()
         response = r.json()
@@ -202,10 +213,10 @@ class Assistant:
         del response['response']
         return response
 
-    def openAI(self, send_obj: dict, *args, **kwargs) -> dict:
+    def openAI(self, context: dict, *args, **kwargs) -> dict:
         """
         Handles communication with the OpenAI assistant.
         """
         self.client = OpenAI(api_key=gp_sts.get_api_key(self.host).get('key'))
-        response = self.client.chat.completions.create(**send_obj).choices[0].message.__dict__
+        response = self.client.chat.completions.create(**context).choices[0].message.__dict__
         return response

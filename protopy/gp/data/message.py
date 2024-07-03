@@ -13,6 +13,7 @@ import protopy.settings as sts
 from dataclasses import dataclass, field
 from typing import Optional
 from protopy.gp.data.content import Content
+from datetime import datetime as dt
 
 @dataclass
 class Message:
@@ -20,9 +21,10 @@ class Message:
     content: Optional[Content] = None
     role: Optional[str] = None
     instructs: Optional[str] = None
-    tag: Optional[str] = None
+    # tag: Optional[str] = None
     watermark: Optional[str] = None
-    # mId: int = None
+    mType: Optional[str] = None
+    mId:str = re.sub(r"([: .])", r"-" , str(dt.now())) + '_Message'
     # use_tags: bool = True
 
     def __post_init__(self, *args, **kwargs):
@@ -30,11 +32,20 @@ class Message:
             self.content = Content()
             self.content.text = self.content.get_input(f'{self.name}', *args, **kwargs)
         elif not isinstance(self.content, Content):
-            self.content = Content(text=str(self.content), instructs=self.instructs, tag='expert')
+            self.content = Content(
+                                    text=str(self.content), 
+                                    instructs=self.instructs, 
+                                    tag='expert',
+                            )
         if self.role is None:
             self.role = 'input'
         elif self.role == 'assistant':
             self.watermark = sts.watermark if self.watermark is None else self.watermark
+        if self.mType is None:
+            if self.content is None and self.instructs is not None:
+                self.mType = 'instructs'
+            else:
+                self.mType = 'entry'
 
     def __str__(self, *args, **kwargs) -> str:
         return self.to_table(*args, **kwargs)
@@ -47,14 +58,14 @@ class Message:
             'content': self.content.construct(*args, **kwargs),
             'role': self.role,
             'watermark': self.watermark,
-            # 'mId': self.mId
+            'mType': self.mType,
+            'mId': self.mId,
         }
 
-
-    def to_table(self, *args, tablefmt='plain', use_names:bool=True, use_color:bool=True, **kwargs) -> None:
+    def to_table(self, *args, 
+                        tablefmt='plain', use_names:bool=True, use_color:bool=True, **kwargs,
+        ) -> None:
         # converts the message to a printable prompt message (using tabulate tables)
-        # return hlp.pretty_print_messages([self.to_dict()], *args, clear=False, **kwargs)
-        # raise NotImplementedError("Message.to_table is not implemented yet.")
         m = self.to_dict(*args, **kwargs)
         name, content = m.get('name'), m.get('content', m.get('text'))
         role, watermark = m.get('role'), m.get('watermark')

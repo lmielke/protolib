@@ -59,12 +59,11 @@ class Expert:
                                         use_names = kwargs.get('use_names'),
                                 )
         # after chat is created append additional instructions
-        self.chats[chat_name].add_instructions(
-                                                instructs if instructs else self.instructs, 
-                                                *args, 
-                                                tag=self.name, 
-                                                **kwargs
-                                                )
+        self.chats[chat_name].initialize(   instructs if instructs else self.instructs, *args,
+                                            tag=self.name, 
+                                            infos=self.infos,
+                                            **kwargs
+                            )
 
     def add_expert_to_mixture(self, *args, **kwargs):
         # assert len(sts.experts) < sts.max_experts, f"Max num experts: {sts.max_experts}!"
@@ -96,7 +95,6 @@ class Expert:
         # sts.skills defines some skills depending on the name of the expert
         instructs = '' if instructs is None else instructs
         infos = set(self.infos if infos is None else infos)
-        infos.add('user_info')
         self.template = Template(self, *args, t_name=self.domain, **kwargs,)
         context.update({'domain': self.domain, 'name': self.name})
         instructs += self.template.load(context, *args, infos=infos, **kwargs,)
@@ -146,10 +144,10 @@ class Expert:
         # case 2 thought is not provided then think about it
         self.chats['master'].add_instructions(instructs, *args, **kwargs)
         if message is None and role == 'assistant':
-            self.chats['master'].get_model_response(*args, **kwargs)
+            self.chats['master'].get_model_response(*args, to_chat=True, **kwargs)
         # if non of the conditions above apply, trigger manual input via content=None
         else:
-            self.chats['master'].append(message, *args, instructs=instructs, **kwargs)
+            self.chats['master'].append(message, *args, instructs=instructs, role=role, **kwargs)
         return self.chats['master'].messages[-1]
 
     def speak(self, message=None, *args, to:[set, None, False]=sts.experts.keys(), **kwargs):
@@ -183,20 +181,29 @@ class Expert:
         self.last_said = thought
         return thought
 
-    def ask(self,   to:str, question:str=None, *args, 
-                    instructs:str=None, role:str=None, **kwargs):
+    def ask(self,   respondent_name:str, question:str=None, *args, 
+                    instructs:str=None, role:str=None, use_names:bool=True, **kwargs):
         """
         Generates a question (message) and appends it to the chat
         Then lets the agent speak, to ask that question.
         """
-        # get the respondent instance from sts.experts
-        respondent= sts.experts.get(to, None)
+        # get the respondent_name instance from sts.experts
+        respondent = sts.experts.get(respondent_name, None)
         # this is asking the question
-        question = f"@{respondent.name}: {question}" if question is not None else None
+        name_prefix = f"@{respondent.name} " if use_names else ''
+        question = f"{name_prefix} Question: {question}" if question is not None else None
         self.speak(question, *args, role='user', **kwargs)
         # this is requesting the answer from expert the quesion was asked to
         return respondent.speak(None, *args, role='assistant', instructs=instructs, **kwargs)
 
+    def answer(self, asker_name:str, question:str=None, *args,
+                    instructs:str=None, role:str=None, **kwargs):
+        """
+        Convenience method that lets the agent answer the question asked by another agent. 
+        Uses self.ask with reversed roles for asker and respondent.
+        """
+        asker = sts.experts.get(asker_name, None)
+        return asker.ask(self.name, question, *args, instructs=instructs, **kwargs)
 
     def listen(self, text:str=None, *args, instructs:str=None, **kwargs):
         """

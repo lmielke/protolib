@@ -3,7 +3,7 @@
         "name": "System.adhog_assist_ps_action",
         "description": "\n        Executes powershell commands. To be used when the user asks the assistant \n        for an immediate action. If that action can be performed using a powershell command, \n        this function will do it.\n            Example trigger prompts: \n                List all my files for the current directory.\n                Clone proto into my user dir. Call the new project myclocklib.\n                Create a file/folder named ...\n                Show me tho OS info for my Windows.\n        Args:\n            cmd (str): The command to be executed by subprocess ps. Use any ps command.\n                Examples:\n                    - 'dir'\n                    - 'ls'\n                    - 'mkdir dir_name'\n                    - 'echo \"# filename.py\" > filename.py'\n                    - ...\n        ",
         "import": "protopy.helpers.sys_exec.system",
-        "module_path": "C:\\Users\\lars\\python_venvs\\libs\\protolib\\protopy\\helpers\\sys_exec\\system.py",
+        "module_path": "c:\\users\\lars\\python_venvs\\libs\\protolib\\protopy\\helpers\\sys_exec\\system.py",
         "parameters": {
             "type": "object",
             "properties": {
@@ -27,7 +27,7 @@
         "name": "System.adhog_assist_ps_action",
         "description": "\n        Executes powershell commands. To be used when the user asks the assistant \n        for an immediate action. If that action can be performed using a powershell command, \n        this function will do it.\n            Example trigger prompts: \n                List all my files for the current directory.\n                Clone proto into my user dir. Call the new project myclocklib.\n                Create a file/folder named ...\n                Show me tho OS info for my Windows.\n        Args:\n            cmd (str): The command to be executed by subprocess ps. Use any ps command.\n                Examples:\n                    - 'dir'\n                    - 'ls'\n                    - 'mkdir dir_name'\n                    - 'echo \"# filename.py\" > filename.py'\n                    - ...\n        ",
         "import": "protopy.helpers.sys_exec.system",
-        "module_path": "C:\\Users\\lars\\python_venvs\\libs\\protolib\\protopy\\helpers\\sys_exec\\system.py",
+        "module_path": "c:\\users\\lars\\python_venvs\\libs\\protolib\\protopy\\helpers\\sys_exec\\system.py",
         "parameters": {
             "type": "object",
             "properties": {

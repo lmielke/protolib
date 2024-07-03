@@ -3,7 +3,7 @@
         "name": "PackageInfo.analyze_package_imports",
         "description": "\n        Analyze the import structure of modules in a Python package and generate a graph,\n        starting from main file.  Standard library imports are excluded.\n        The graph can be visualized if `verbose` is set to a value greater than zero.\n            Example triggers: \n                Show me the import structure of my package.\n                Display the import graph for my project.\n                Where is this module used in my project?\n        Args:\n            *args: Additional positional arguments. (not relevant here)\n            main_file_name (str): The name file to trace imports from.\n                Defaults to the package entry file.\n            verbose (int, optional): Verbose mode.\n                Defaults to 1.\n            **kwargs: Additional keyword arguments. (not relevant here)\n        Returns:\n            str: The Graphviz source code of the generated import graph.\n        Example arguments:\n            {main_file_name: \"info.py\", verbose: 1}\n        ",
         "import": "protopy.helpers.sys_info.import_info",
-        "module_path": "C:\\Users\\lars\\python_venvs\\libs\\protolib\\protopy\\helpers\\sys_info\\import_info.py",
+        "module_path": "c:\\users\\lars\\python_venvs\\libs\\protolib\\protopy\\helpers\\sys_info\\import_info.py",
         "parameters": {
             "type": "object",
             "properties": {
@@ -32,7 +32,7 @@
         "name": "PackageInfo.analyze_package_imports",
         "description": "\n        Analyze the import structure of modules in a Python package and generate a graph,\n        starting from main file.  Standard library imports are excluded.\n        The graph can be visualized if `verbose` is set to a value greater than zero.\n            Example triggers: \n                Show me the import structure of my package.\n                Display the import graph for my project.\n                Where is this module used in my project?\n        Args:\n            *args: Additional positional arguments. (not relevant here)\n            main_file_name (str): The name file to trace imports from.\n                Defaults to the package entry file.\n            verbose (int, optional): Verbose mode.\n                Defaults to 1.\n            **kwargs: Additional keyword arguments. (not relevant here)\n        Returns:\n            str: The Graphviz source code of the generated import graph.\n        Example arguments:\n            {main_file_name: \"info.py\", verbose: 1}\n        ",
         "import": "protopy.helpers.sys_info.import_info",
-        "module_path": "C:\\Users\\lars\\python_venvs\\libs\\protolib\\protopy\\helpers\\sys_info\\import_info.py",
+        "module_path": "c:\\users\\lars\\python_venvs\\libs\\protolib\\protopy\\helpers\\sys_info\\import_info.py",
         "parameters": {
             "type": "object",
             "properties": {

@@ -49,9 +49,14 @@ class Question:
 
 
     def run(self, *args, question:str, function:str=None, **kwargs):
-        answer, user_response = None, False
-        self.chat.append(question, role='user')
-        self.chat.get_model_response(*args, 
+        ur = self.chat.append(question, role='user').content.fmt.clean
+        # first we check the exit condition
+        if any([word in ur for word in ['quit', 'bye', 'clear']]):
+            if ur.strip() == 'clear':
+                os.system('cls')
+            return self.chat.messages[-2].content.construct(), None
+        # lets answer the question
+        mr = self.chat.get_model_response(*args, 
                                             single_shot=True, 
                                             function=function,
                                             to_chat=True, **kwargs
@@ -63,20 +68,25 @@ class Question:
             print(self.chat.to_table(verbose=1))
         if self.verbose:
             print(self.chat.to_table(verbose=1))
-        self.chat.append(None, role='user')
-        user_response = self.chat.messages[-1].content.text
-        if any([word in user_response for word in ['thanks', 'bye', 'clear']]):
-            if user_response.strip() == 'clear':
-                os.system('cls')
-            return str(self.chat.messages[-2]), None
-        else:
-            return None, user_response
+        return None, ur
 
 
-def main(*args, question:str=None, **kwargs):
-    q, answer = Question(*args, **kwargs), None
+def main(*args, question:str=None, regex:str=None, **kwargs):
+    """
+    Answers a question
+    NOTE: regex is only used because currently no other argument exists.
+    regex: str In this case the number of question loops before return is forced.
+    """
+    num_loops, cnt = 10 if regex is None else int(regex), 0
+    print(f"{sts.RED}START:{sts.RESET} {regex = }, {num_loops = }, {cnt = }")
+    q, answer, question = Question(*args, **kwargs), None, question
     while answer is None:
         answer, question = q.run(*args, question=question, **kwargs)
+        cnt += 1
+        if cnt >= num_loops:
+            question = 'quit'
+        else:
+            question = None
     print(f"Prompt duration: {sts.YELLOW}{time.time() - q.start_time}{sts.RESET}")
     return answer
 
