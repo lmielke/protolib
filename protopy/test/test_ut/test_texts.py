@@ -73,21 +73,18 @@ class Test_Text(unittest.TestCase):
                 ("\x1b[31mRed Text\x1b[0m and \x1b[34mBlue Text\x1b[0m", "Red Text and Blue Text"),
                  (' \x1b[31madmin:\x1b[0m1 ', ' admin:1 '),
                  ('\x1b[37m►\x1b[39m \x1b[34mms_elly:\x1b[0m2 Hi, I am Ms_elly!', '► ms_elly:2 Hi, I am Ms_elly!'),
-                 ('\x1b[37m►\x1b[39m \x1b[32mlars:\x1b[0m\3 Hi, I am Lars!', '► lars: Hi, I am Lars!'),
+                 ('\x1b[37m►\x1b[39m \x1b[32mlars:\x1b[0m3 Hi, I am Lars!', '► lars:3 Hi, I am Lars!'),
                     ]
         text_instance = Text(raw=input_texts[0][0])
         for text, expected in input_texts:
             decolorized = Text.decolorize_text(text)
+            # print(f"{decolorized = }", f"{expected = }")
+            # print( f"{sts.YELLOW = }", f"{sts.GREEN = }", f"{sts.RED = }", 
+            #         f"{sts.MAGENTA = }", f"{sts.BLUE = }", f"{sts.CYAN = }", f"{sts.WHITE = }",
+            #         f"{sts.DIM = }", f"{sts.RESET = }", f"{sts.ST_RESET = }",
+            #         ),
             # Expected output should not contain any ANSI codes
             self.assertEqual(decolorized, expected, "ANSI color codes should be removed from the text.")
-
-
-    def test_prettyfy_instructions(self):
-        instructions = "These are some instructions that should be prettified."
-        text_obj = Text(instructions, tag='instructs')
-        text_obj.prettyfy_instructions(tag="instructs", verbose=2)
-        start_tag, end_tag, color = sts.tags["instructs"]
-        self.assertIn(start_tag, text_obj.pretty)  # Check for the actual tag
 
     def test_add_tags(self):
         content = "This is some content."

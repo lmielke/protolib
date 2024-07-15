@@ -1,11 +1,13 @@
 docker_info:
-  last_update: '2024-07-03T17:42:07.391121'
-  value: "\n\e[33m################### proto info -i DOCKER ###################\e[0m\n\
-    \e[31mDocker not running! e = CalledProcessError(1, 'docker info')\n\e[0m"
+  last_update: '2024-07-15T12:55:40.289723'
+  value: "\n\e[33m############## START info -i DOCKER ##############\e[0m\n# CheckVal:\
+    \ Docker system status report.\n\e[31mDocker not running! e = CalledProcessError(1,\
+    \ 'docker info')\n\e[0m\n\e[33m############### END info -i DOCKER ###############\e\
+    [0m"
 get_os_info:
-  last_update: '2024-07-03T16:27:48.632340'
+  last_update: '2024-07-15T09:54:15.232822'
   value:
-    Available Physical Memory: 9.503 MB
+    Available Physical Memory: 8.774 MB
     Boot Device: /Device/HarddiskVolume2
     Hyper-V Requirements: A hypervisor has been detected. Features required for Hyper-V
       will not be displayed.
@@ -14,7 +16,7 @@ get_os_info:
     OS Version: 10.0.19045 N/A Build 19045
     PowerShell Version: 'Microsoft.Powershell_profile.ps1 l214 scriptRoot: C:/Users/lars/OneDrive/Documents/WindowsPowerShell
       Call count path: C:/Users/lars/OneDrive/Documents/WindowsPowerShell/CallCount.json
-      Major Minor Build Revision 5 1 19041 4522'
+      Major Minor Build Revision 5 1 19041 4648'
     Processor(s): 1 Processor(s) Installed.
     System Manufacturer: Acer
     System Model: Predator PH317-53

@@ -92,6 +92,7 @@ class Template:
             infos = [infos]
         elif infos is None:
             infos = []
+        if 'user_info' not in infos: infos.append('user_info')
         # Check for infos already available in templ_infos
         missing_infos = [info for info in infos if info not in self.templ_infos]
         for i, missing in enumerate(missing_infos):

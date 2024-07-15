@@ -17,7 +17,7 @@ import protopy.helpers.collections as hlp
 from protopy.gp.data.tool_choice import FunctionToJson
 f_json = FunctionToJson()
 
-# this expert mockup class is used to pass an owner object to chat
+# this task mockup class is used to pass an owner object to chat
 class Task:
     def __init__(self, *args, **kwargs):
         self.name = 'unittest'

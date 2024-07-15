@@ -18,10 +18,9 @@ def clone_info(*args, **kwargs):
     Helps user to understand how to use clone.py and which paramets to use for cloning
     proto clone -pr 'badylib' -n 'badypack' -a 'bady' -t '/temp' -p 3.11
     """
-    msg = (f"\n{sts.WHITE}{f' CLONE INFO ':-^80}{sts.RESET} ")
-    msg += (
-            f"\n{sts.YELLOW}NOTE:{sts.RESET} "
-            f"to clone protopy use proto clone like this:\n\n"
+    msg = (
+            f"\n{sts.YELLOW}CLONE INFO:{sts.RESET} "
+            f"to clone protopy use proto clone like this:\n"
             f"proto clone "
             f"{sts.YELLOW}-pr{sts.RESET} 'badylib' "
             f"{sts.YELLOW}-n{sts.RESET} 'badypackage' "

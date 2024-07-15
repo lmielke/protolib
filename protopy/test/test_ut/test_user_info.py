@@ -32,10 +32,7 @@ class TestUserhistory(unittest.TestCase):
         """
         user_hist = Userhistory()
         user_hist.get_ps_history()
-        self.assertIn(
-                        'python -m unittest protopy.test.test_ut.test_user_info', 
-                        user_hist.recently_used_cmds
-        )
+        self.assertTrue(len(user_hist.recently_used_cmds) == 100)
 
 if __name__ == "__main__":
     unittest.main()

@@ -67,9 +67,9 @@ class Test_Expert(unittest.TestCase):
         poppendieck_m = Expert(name='poppendieck_m', use_tags=False, use_names=False, color='blue')
         # self.sudo = Expert(name=sts.sudo)
         matches = list([m[1].lower() for m in re.findall(
-                                r'(## proto info -i )(\w{2,20})( ##)', 
+                                r'(## START info -i )(\w{2,20})( ##)', 
                                 str(poppendieck_m.chats['master']))])
-        self.assertEqual({'project', 'os_activity', 'os'}, set(matches))
+        self.assertEqual({'project', 'os_activity', 'os', 'user_info'}, set(matches))
         # chat should have chat instructions and expert instructions
         if self.verbose:
             print(str(poppendieck_m.chats['master']))
@@ -80,7 +80,7 @@ class Test_Expert(unittest.TestCase):
         ut_expert = Expert(name=name)
         instructs = ut_expert.load_instructions(infos=['docker'])
         # chat should contain docker infos
-        self.assertIn('###### proto info -i DOCKER ######', instructs)
+        self.assertIn('###### START info -i DOCKER ######', instructs)
         # if self.verbose:
         #     print(f"\n{ut_expert.chats['master'].to_table(verbose=2)}")
 

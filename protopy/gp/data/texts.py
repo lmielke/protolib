@@ -63,14 +63,16 @@ class Text:
             char_len (int): The character length to group the clean by.
         """
         text = text if text is not None else self.clean
+        if not '\n' in text.strip('\n'):
+            text = '\n'.join(re.compile(sts.split_flags).split(text))
+            text = re.sub(r'(\d*\.)(\s*\n)', r'\1 ', text)
         texts = self.handle_existing_linebreaks(text, char_len, *args, **kwargs)
         texts = [textwrap.wrap(t, width=char_len) for t in texts]
         texts = ['\n'.join(t) for t in texts]
         # sometimes there is lengthy sequences of speces in the text. So I remove 
         # whats longer than a tab.
-        texts = [t.replace('     ', ' ') for t in texts]
-        self.pretty = '\n'.join(texts).strip()
-        return self.pretty
+        texts = [t.replace('     ', ' ').replace('<t>', '  ') for t in texts]
+        return '\n'.join(texts).strip()
 
     def handle_existing_linebreaks(self, text: str = None, *args, **kwargs) -> List[str]:
         """
@@ -85,6 +87,7 @@ class Text:
             List[str]: List of text segments split by line breaks.
         """
         text = text if text is not None else self.clean
+        text = text.replace('\t', '<t>').replace(' '*4, '<t>').replace(' '*3, '<t>')
         texts = re.split(r'(\r\n|\r|\n)', text)
         texts = [t.strip() for t in texts if t.strip()]
         return texts
@@ -112,35 +115,6 @@ class Text:
         """
         ansi_escape = re.compile(r'\x1b\[([0-9]+)(;[0-9]+)*m')
         self.clean = ansi_escape.sub('', self.raw)
-
-    def prettyfy_instructions(self, text:str=None, *args, verbose: int = 1, **kwargs) -> None:
-        """
-        Prettifies instructions in the clean based on verbosity.
-
-        Formats instructions for better readability.
-
-        Args:
-            tag (str): The tag to apply.
-            verbose (int): Verbosity level for formatting.
-        """
-        if not self.clean: return ''
-        if verbose == 0:
-            pretty = ''
-        if verbose >= 2:
-            self.group_text(text, sts.inner_width, *args, **kwargs)
-            pretty = self.pretty.replace('\n', '\n\t')
-        elif verbose >= 1:
-            self.group_text(text, sts.inner_width, *args, **kwargs)
-            pretty = self.pretty.replace('\n', '\n\t')[:sts.visible_chars]
-            hidden_chars = max(len(self.raw) - sts.visible_chars, 0)
-            if hidden_chars:
-                pretty += (
-                        f"\n\t...[hidden {hidden_chars} characters], "
-                        f"verbose={verbose}"
-                        )
-        else:
-            pretty = ''
-        self.pretty = self.add_tags(pretty, *args, **kwargs)
 
     def add_tags(self, texts: str, *args, tag: str=None, use_tags:bool=True, **kwargs) -> str:
         """
@@ -254,10 +228,11 @@ class Text:
         text = ansi_color_pattern.sub('', text)
 
         # Pattern to match other non-printable ASCII characters
-        non_printable_pattern = re.compile(r'[\x00-\x1F\x7F]')
-        cleaned_text = non_printable_pattern.sub('', text)
+        # non_printable_pattern = re.compile(r'\x03')
+        # non_printable_pattern = re.compile(r'[\x00-\x1F\x7F]')
+        # text = non_printable_pattern.sub('', text)
         
-        return cleaned_text
+        return text
 
 
     @staticmethod

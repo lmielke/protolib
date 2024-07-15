@@ -19,7 +19,7 @@
                 },
                 "module_name": {
                     "type": "<class 'str'>",
-                    "default": "2024-07-03-17-42-01-030117_un_named.py",
+                    "default": "2024-07-15-12-55-38-280392_un_named.py",
                     "required": false
                 },
                 "module_dir": {
@@ -48,7 +48,7 @@
                 },
                 "module_name": {
                     "type": "string",
-                    "default": "2024-07-03-17-42-01-030117_un_named.py",
+                    "default": "2024-07-15-12-55-38-280392_un_named.py",
                     "enum": [
                         "'settings.py'",
                         "'chat.py'"

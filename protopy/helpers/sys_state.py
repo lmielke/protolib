@@ -69,18 +69,6 @@ class State:
         with open(self.cache_state_path, 'w') as f:
             yaml.safe_dump(self.data, f)
 
-    def get(self, info_name: str) -> Any:
-        """
-        Retrieves the cached value for the given info name.
-
-        Args:
-            info_name: The key for which to retrieve the cached value.
-
-        Returns:
-            The cached value if it exists, else None.
-        """
-        return self.data.get(info_name, {}).get("value")
-
     def set(self, info_name: str, value: Any) -> None:
         """
         Sets a new value in the cache for the given info name and updates the 
@@ -163,10 +151,10 @@ def state_cache(max_cache_hours: int = sts.max_cache_hours, \
         def wrapper(*args, **kwargs):
             info_name = func.__name__
             state = State(cache_state_name=cache_state_name, cache_state_dir=cache_state_dir)
-            state_content = state.get(info_name)
+            state_content = state.data.get(info_name, {}).get("value")
             if state.is_valid(info_name, max_cache_hours) and not sts.RED in state_content:
+                # print(state_content)
                 return state_content
-
             result = func(*args, **kwargs)
             state.set(info_name, result)
             return result

@@ -9,8 +9,9 @@ import argparse
 def find_changed(*args, startDir, days, projectName, verbose:int=0, **kwargs):
     assert days is not None, f"days must not be {days}"
     if projectName == 'all': projectName = None
-    print(f"Searching with: {startDir, days, projectName}")
+    # print(f"Searching with: {startDir, days, projectName}")
     gitDir, gitDirs = 'None', set()
+    msgs = ""
     for i, (_dir, dirs, files) in enumerate(os.walk(os.path.expanduser(startDir))):
         if projectName is not None and not projectName in _dir: continue
         if not files: continue
@@ -36,10 +37,14 @@ def find_changed(*args, startDir, days, projectName, verbose:int=0, **kwargs):
                             out = r.stdout.decode('utf-8').replace('\n', '\n\t')
                             if out:
                                 msg = f"{file} was changed {daysUnchanged} ago ! path: {gitDir}"
-                                print(f"{color.Fore.YELLOW}{msg}{color.Style.RESET_ALL}", end='')
-                                print(f"\n\tgit dff: {out}")
+                                if verbose:
+                                    print(f"{color.Fore.YELLOW}{msg}{color.Style.RESET_ALL}", end='')
+                                    print(f"\n\tgit dff: {out}")
+                                msgs += f"{msg}\n\tgit diff: {out}\n"
+
                 except Exception as e:
                     print(f"{e = }")
+    return msgs
 
 
 
@@ -89,7 +94,7 @@ def mk_args():
     return parser.parse_args()
 
 def main(*args, **kwargs):
-    find_changed(*args, **kwargs)
+    return find_changed(*args, **kwargs)
 
 
 if __name__ == '__main__':

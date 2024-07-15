@@ -37,7 +37,7 @@ class Content:
     def to_dict(self, *args, fm:str='white', **kwargs) -> dict:
         return {
             'instructs': self.ifmt.add_tags(getattr(self.ifmt, fm), *args, **kwargs) if self.ifmt else None,
-            'code_blocks': hlp.colorize_code_blocks(self.code_blocks, *args, **kwargs),
+            'code_blocks': hlp.colorize_code_blocks(self.code_blocks, *args, fm=fm, **kwargs),
             'text': getattr(self.fmt, fm) if self.fmt else None,
         }
 

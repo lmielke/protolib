@@ -19,6 +19,7 @@ pywin32 = "*"
 winshell = "*"
 pynput = "*"
 pygetwindow = "*"
+python-levenshtein = "*"
 
 [dev-packages]
 black = "*"

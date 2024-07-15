@@ -16,6 +16,7 @@ from protopy.helpers.sys_info.package_info import pipenv_is_active, pipenv_info
 
 from protopy.helpers.sys_state import state_cache
 
+
 all_infos = {"git_diff", "os", "network", "python", "package", "project", "docker", "os_activity", "ps_history"}
 info_list = []
 
@@ -40,18 +41,14 @@ def get_infos(*args, verbose, infos: set = None, **kwargs):
     if verbose >= 2 or ("python" in infos):
         python_info(*args, **kwargs)
     if verbose >= 3 or ("docker" in infos):
+        # implemetation differs because of state_cache
         collect_infos(docker_info(*args, **kwargs))
     if verbose >= 3 or ("git_diff" in infos):
-        collect_infos(git_diff.main(    *args,
-                                        startDir=sts.project_dir, 
-                                        days=1, 
-                                        projectName='protolib',
-                                        verbose=0,
-                                        **kwargs,
-                    )
-        )
+        get_git_diff(*args, **kwargs)
     if verbose >= 1 or ("os_activity" in infos):
-        collect_infos(f"""\n{sts.YELLOW}{f" proto info -i os_activity ":#^60}{sts.ST_RESET}""")
+        name = 'os_activity'
+        collect_infos(f"""\n{sts.YELLOW}{f" START {sts.info_cmd} {name} ":#^50}{sts.ST_RESET}""")
+        collect_infos(f"# CheckVal: 'User activity for today.'")
         file_name, log = ApplicationInfo.load_log_file('today', *args, **kwargs)
         cnt, logs = 0, []
         for k, vs in log.items():
@@ -59,32 +56,52 @@ def get_infos(*args, verbose, infos: set = None, **kwargs):
             cnt += 1
             if cnt > 5: break
         collect_infos('\n\n'.join(logs))
+        collect_infos(f"""\n{sts.YELLOW}{f" END {sts.info_cmd} {name} ":#^60}{sts.ST_RESET}""")
     if verbose >= 1 or ("ps_history" in infos):
         text_len = 30
-        collect_infos(f"""\n{sts.YELLOW}{f" proto info -i ps_history ":#^60}{sts.ST_RESET}""")
+        name = 'ps_history'
+        collect_infos(f"""\n{sts.YELLOW}{f" START {sts.info_cmd} {name} ":#^50}{sts.ST_RESET}""")
         collect_infos([h for h in Userhistory().get_ps_history(text_len, *args, **kwargs) \
                                                                 if not 'proto info' in h])
     if verbose or ("user_info" in infos):
         user_info(*args, **kwargs)
 
 def user_info(*args, **kwargs):
-    msg = f"""\n{f" PROTOPY USER info ":#^60}"""
-    msg += (
+    name = 'USER_INFO'
+    collect_infos(f"""\n{sts.GREEN}{f" START {sts.info_cmd} {name} ":#^50}{sts.ST_RESET}""")
+    collect_infos(f"# CheckVal: 'This is the CheckVal answer.'")
+    msg = (
         f"{sts.YELLOW}\nfor more infos:{sts.ST_RESET}\n"
-        f"proto info -i {' '.join(all_infos)} or -v 1-3"
+        f"proto {sts.info_cmd} {' '.join(all_infos)} or -v 1-3"
         )
     collect_infos(f"{sts.GREEN}{msg}{sts.ST_RESET}")
     # how to cone info
     from protopy.creator.clone import clone_info
-
     collect_infos(clone_info(*args, **kwargs))
+    collect_infos(f"""\n{sts.GREEN}{f" END {sts.info_cmd} {name} ":#^60}{sts.ST_RESET}""")
+
+def get_git_diff(*args, **kwargs):
+    name = 'GIT_DIFF'
+    collect_infos(f"""\n{sts.YELLOW}{f" START {sts.info_cmd} {name} ":#^50}{sts.ST_RESET}""")
+    collect_infos("# CheckVal: ' Git Diff Analysis Tool Updates.'")
+    collect_infos(git_diff.main(    *args,
+                                    startDir=sts.project_dir, 
+                                    days=1, 
+                                    projectName='protolib',
+                                    verbose=0,
+                                    **kwargs,
+                )
+    )
+    collect_infos(f"""\n{sts.YELLOW}{f" END {sts.info_cmd} {name} ":#^60}{sts.ST_RESET}""")
+
 
 def package_info(*args, regex:str=sts.package_name, **kwargs):
     """
     This displays the import structure of the package starting at file_name.
     """
-    collect_infos(f"""\n{sts.YELLOW}{f" proto info -i PACKAGE ":#^60}{sts.ST_RESET}""")
-    collect_infos("Here are some infos about our relevant python package.")
+    name = 'PACKAGE'
+    collect_infos(f"""\n{sts.YELLOW}{f" START {sts.info_cmd} {name} ":#^50}{sts.ST_RESET}""")
+    collect_infos("# CheckVal: 'Protopy Python Project Structure.'")
     ignores = sts.ignore_dirs | {'gp', 'models'}
     collect_infos(f"{Tree(coloreds=None,).mk_tree(sts.project_dir, ignores=ignores,)}\n")
     file_name = regex if regex is not None else sts.package_name
@@ -99,10 +116,12 @@ def package_info(*args, regex:str=sts.package_name, **kwargs):
                         f"$EXE: {sys.executable} -> {pipenv_is_active(sys.executable) = }\n"
                         )
         )
+    collect_infos(f"""\n{sts.YELLOW}{f" END {sts.info_cmd} {name} ":#^50}{sts.ST_RESET}""")
 
 def project_info(*args, api:str=None, verbose:int=0, show:str=False, infos:list=None, **kwargs):
-    collect_infos(f"""\n{sts.YELLOW}{f" proto info -i PROJECT ":#^60}{sts.ST_RESET}""")
-    collect_infos("Here are some general project infos.")
+    name = 'PROJECT'
+    collect_infos(f"""\n{sts.YELLOW}{f" START {sts.info_cmd} {name} ":#^50}{sts.ST_RESET}""")
+    collect_infos("# CheckVal: 'Python package development.'")
     pr_infos = [f"{sts.project_name = }", f"{sts.package_dir = }", f"{sts.test_dir = }"]
     collect_infos('\n'.join(pr_infos))
     collect_infos(f"\n\n{sts.project_dir = }")
@@ -124,34 +143,46 @@ def project_info(*args, api:str=None, verbose:int=0, show:str=False, infos:list=
     with open(os.path.join(sts.project_dir, "Readme.md"), "r") as f:
         collect_infos(f"\n<readme>\n{f.read()}\n</readme>\n")
         # package help
+    collect_infos(f"""\n{sts.YELLOW}{f" END {sts.info_cmd} {name} ":#^50}{sts.ST_RESET}""")
 
 def system_info(*args, **kwargs):
-    collect_infos(f"""\n{sts.YELLOW}{f" proto info -i OS ":#^60}{sts.ST_RESET}""")
+    name = 'OS'
+    collect_infos(f"""\n{sts.YELLOW}{f" START {sts.info_cmd} {name} ":#^50}{sts.ST_RESET}""")
+    collect_infos("# CheckVal: 'Operating System Overview.'")
     collect_infos("Here are some infos about the underlying operating os.")
     sys_info = {k: group_text(v, 50) for k, v in get_os_info().items()}
     collect_infos(sys_info)
     # collect_infos(tb(sys_info.items(), headers="keys", tablefmt="psql", showindex=True))
+    collect_infos(f"""\n{sts.YELLOW}{f" END {sts.info_cmd} {name} ":#^50}{sts.ST_RESET}""")
 
 def network_info(*args, **kwargs):
-    collect_infos(f"""\n{sts.YELLOW}{f" proto info -i NETWORK ":#^60}{sts.ST_RESET}""")
+    name = 'NETWORK'
+    collect_infos(f"""\n{sts.YELLOW}{f" START {sts.info_cmd} {name} ":#^50}{sts.ST_RESET}""")
+    collect_infos("# CheckVal: 'Network activity and IP addresses.'")
     # get external ip_adress and other relevant network info
     cmd = "ipconfig" if sys.platform == "win32" else "ifconfig"
     output = subprocess.check_output(cmd).decode()
     ip_adress = [line.split(":")[1].strip() for line in output.split("\n") if "IPv4" in line]
     collect_infos(f"{ip_adress = }")
     collect_infos(f"{requests.get('https://api.ipify.org').text = }")
+    collect_infos(f"""\n{sts.YELLOW}{f" END {sts.info_cmd} {name} ":#^50}{sts.ST_RESET}""")
 
 
 def python_info(*args, **kwargs):
-    collect_infos(f"""\n{sts.YELLOW}{f" proto info -i PYTHON ":#^60}{sts.ST_RESET}""")
+    name = 'PYTHON'
+    collect_infos(f"""\n{sts.YELLOW}{f" START {sts.info_cmd} {name} ":#^50}{sts.ST_RESET}""")
+    collect_infos("# CheckVal: 'Python Environment Details.'")
     collect_infos("Here are some infos about the installed python.")
     py_infos = [f"{sys.executable = }", f"{sys.version = }", f"{sys.version_info = }"]
     collect_infos('\n'.join( py_infos ))
+    collect_infos(f"""\n{sts.YELLOW}{f" END {sts.info_cmd} {name} ":#^50}{sts.ST_RESET}""")
 
 
 @state_cache(max_cache_hours=1)
 def docker_info(*args, **kwargs):
-    docker_tbl = f"""\n{sts.YELLOW}{f" proto info -i DOCKER ":#^60}{sts.ST_RESET}\n"""
+    name = 'DOCKER'
+    docker_tbl = f"""\n{sts.YELLOW}{f" START {sts.info_cmd} {name} ":#^50}{sts.ST_RESET}"""
+    docker_tbl += '\n# CheckVal: Docker system status report.\n'
     try:
         # some docker infos now
         cmd = "docker info" if sys.platform == "win32" else "docker info"
@@ -165,6 +196,7 @@ def docker_info(*args, **kwargs):
         docker_tbl += tb(d_infos.items(), headers="keys", tablefmt="psql", showindex=True)
     except Exception as e:
         docker_tbl += f"{sts.RED}Docker not running! {e = }\n{sts.ST_RESET}"
+    docker_tbl += f"""\n{sts.YELLOW}{f" END {sts.info_cmd} {name} ":#^50}{sts.ST_RESET}"""
     return docker_tbl
 
 def get_file_info(*args, tgt_dir:str, infos:list=None, **kwargs):

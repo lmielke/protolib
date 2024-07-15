@@ -19,12 +19,14 @@ class Question:
     """
 
 
-    def __init__(self, *args, model:str='l3b', verbose=1, **kwargs):
+    def __init__(self, *args, model:str=None, verbose=1, single_shot=True, **kwargs):
         self.start_time = time.time()
         self.try_count, self.max_tries = 0, 3
         self.temperature, self.d_temperature, self.max_temp = 0, 1.2 / self.max_tries, 1.0
         self.name = getpass.getuser()
-        self.d_assi, self.role = model, 'user'
+        self.d_assi = 'l3_1' if model is None else model
+        self.single_shot = True if single_shot is None else single_shot
+        self.role = 'user'
         self.verbose = verbose
         # setting up the chat starts here
         self.chat = Chat(
@@ -57,7 +59,7 @@ class Question:
             return self.chat.messages[-2].content.construct(), None
         # lets answer the question
         mr = self.chat.get_model_response(*args, 
-                                            single_shot=True, 
+                                            single_shot=self.single_shot, 
                                             function=function,
                                             to_chat=True, **kwargs
                                             )
@@ -66,28 +68,30 @@ class Question:
         if exe:
             self.chat.append(exe, role='system')
             print(self.chat.to_table(verbose=1))
-        if self.verbose:
+        if self.verbose >= 1:
             print(self.chat.to_table(verbose=1))
         return None, ur
 
 
-def main(*args, question:str=None, regex:str=None, **kwargs):
+def main(*args, question:str=None, regex:str=None, verbose:int=0, **kwargs):
     """
     Answers a question
     NOTE: regex is only used because currently no other argument exists.
     regex: str In this case the number of question loops before return is forced.
     """
-    num_loops, cnt = 10 if regex is None else int(regex), 0
-    print(f"{sts.RED}START:{sts.RESET} {regex = }, {num_loops = }, {cnt = }")
-    q, answer, question = Question(*args, **kwargs), None, question
+    num_loops, cnt = 0 if regex is None else int(regex), 0
+    if verbose:
+        print(f"{sts.RED}START:{sts.RESET} {num_loops = }, {cnt = } \n{question = }")
+    q, answer, question = Question(*args, verbose=verbose, **kwargs), None, question
     while answer is None:
-        answer, question = q.run(*args, question=question, **kwargs)
+        answer, question = q.run(*args, question=question, verbose=verbose, **kwargs)
         cnt += 1
         if cnt >= num_loops:
             question = 'quit'
         else:
             question = None
-    print(f"Prompt duration: {sts.YELLOW}{time.time() - q.start_time}{sts.RESET}")
+    if verbose:
+        print(f"Prompt duration: {sts.YELLOW}{time.time() - q.start_time}{sts.RESET}")
     return answer
 
 if __name__ == "__main__":

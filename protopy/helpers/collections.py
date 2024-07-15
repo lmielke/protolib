@@ -224,11 +224,15 @@ def color_expert(name, role, watermark, *args, **kwargs):
     name = f"{watermark if watermark else ''} {color}{name}:{sts.ST_RESET}".strip()
     return name
 
-def colorize_code_blocks(code_blocks:dict, *args, **kwargs):
+def colorize_code_blocks(code_blocks:dict, *args, fm:str='pretty', **kwargs):
     # colorize code blocks
     colorized = {}
     for name, (language, block) in code_blocks.items():
-        block = '\n'.join([f"{sts.code_color}{b}{sts.ST_RESET}" for b in block.split('\n') if b])
+        if fm in ['pretty', 'colored']:
+            preped = [f"{sts.code_color}{b}{sts.ST_RESET}" for b in block.split('\n') if b]
+        else:
+            preped = [f"{b}" for b in block.split('\n') if b]
+        block = '\n'.join(preped)
         # block = '\t' + block.replace('\n', '\t\t')
         language = f"{sts.language_color}{language}{sts.ST_RESET}"
         colorized[name] = '´´´' + language + '\n\n' + block + '\n\n´´´'

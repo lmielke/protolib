@@ -41,11 +41,6 @@ class Test_State(unittest.TestCase):
         self.assertIn('test', data)
         self.assertEqual(data['test']['value'], 'data')
 
-    def test_get(self):
-        self.state.set('test', 'data')
-        self.assertEqual(self.state.get('test'), 'data')
-        self.assertIsNone(self.state.get('nonexistent'))
-
     def test_set(self):
         self.state.set('test', 'data')
         with open(self.cache_path, 'r') as f:

@@ -105,8 +105,7 @@ tags = {
 }
 
 roles = {'assistant': MAGENTA, 'user': GREEN, 'system': YELLOW, 'unittest': CYAN, }
-# experts = {'sherlock': CYAN, 'moe': YELLOW, 'mr_robot': BLUE, 'you': GREEN, 
-            # 'alice': BLUE, 'bob': CYAN}
+
 watermark, exec_watermark = f"{WHITE}►{RESET}", f"{YELLOW}►{RESET}"
 # instructions
 readme_dir = os.path.join(package_dir, 'gp', 'readmes')
@@ -114,17 +113,10 @@ instruct_path = lambda expert_name: os.path.join(readme_dir, f"{expert_name}.md"
 
 # Task settings
 assembly_ixs = {0: 'low', 1: 'medium', 2: 'moderate', 4: 'high',}
-# skills = {
-#             'admin': {'domain':'admin', 'infos': ['network', 'system', 'project', 'docker', 'python']}, 
-#             'lars_m': {'domain':'admin', 'infos': ['network', 'system', 'project', 'docker', 'python']}, 
-#             'demarco_t': {'domain':'management', 'infos': ['project', 'ps_history', 'os_activity']}, 
-#             'poppendieck_m': {'domain':'system', 'infos': ['network', 'system', 'ps_history'],}, 
-#             'springmeyer_d': {'domain':'programmer', 'infos': ['python'],}, 
-#             'richards_m': {'domain':'architect', 'infos': ['project', 'docker'],}, 
-#             'default': {'domain':'programmer', 'infos': ['python'],}, 
-#             }
 
 default_expert = 'User'
+
+# available experts and relevant skills (skills dictionary)
 skills = {
     'admin': {
         'domain': 'admin', 
@@ -214,7 +206,9 @@ ansi_replaces = {
 code_regex = re.compile(r'```(\w*)(.*?)```', re.DOTALL)
 
 
-split_flags = r'(\.\n|\d+\.\s|\|[-.].*|[|]\s{1,2}[0-9 ]{1,2}\s{1,2}[|].*|[+|]----[+].*|-\s|#+\s.+|\nd-+\s|<code_block_\d+>|<instructions>|#########)'
+split_flags = split_flags = r'(\.\n|\d+\.\s|\|[-.].*|[|]\s{1,2}[0-9 ]{1,2}\s{1,2}[|].*|[+|]----[+].*|-\s|#+\s.+|\nd-+\s|<code_block_\d+>|<instructions>|#########)'
+# split_flags = r'(\.\n|\d+\.\s|\|[-.].*|[|]\s{1,2}[0-9 ]{1,2}\s{1,2}[|].*|[+|]----[+].*|-\s|#+\s.+|\nd-+\s|<code_block_\d+>|<instructions>|#########)'
+# split_flags = r'(\d+\..*\n)'
 hierarchy_empties = r'\x1b\[\d\dm|\x1b\[\dm\x1b\[\d\dm'
 
 # state cache settings
@@ -230,3 +224,18 @@ file_types = {
                 '.ps1': 'powershell',
 
 }
+
+check_quest, check_answ = 'CheckQuestion', 'CheckAnswer'
+check_vals = {
+    'USER_INFO': [f"Who is the author of 'The User is king'?", "MT Hamlock et al, 1975"],
+    'OS': [f"Where is Microsofts Headquaters?", "MS-Campus, RD-W-US"],
+}
+
+info_cmd = 'info -i'
+# ################ START info -i OS ################
+# here is some crazy regex constructor due to depreciation warnings and invalid escape errors
+start_token, end_token, appendix = r'(#+\sSTART\s', r'(#+\sEND\s', r'\s([A-Z_]+)\s#+)'
+info_regex = [  f"{start_token}{info_cmd}{appendix}", 
+                f"(.*)", 
+                f"{end_token}{info_cmd}{appendix}",
+            ]

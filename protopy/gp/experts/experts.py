@@ -13,7 +13,6 @@ import random as rd
 from typing import Literal, Optional, Union
 import protopy.helpers.collections as hlp
 import protopy.settings as sts
-from protopy.gp.data.message import Message
 from protopy.gp.data.chat import Chat
 from protopy.gp.data.retrievals import Template
 
@@ -94,7 +93,7 @@ class Expert:
         # some parts of instructs can be read from the OS using 'proto info'
         # sts.skills defines some skills depending on the name of the expert
         instructs = '' if instructs is None else instructs
-        infos = set(self.infos if infos is None else infos)
+        infos = list(set(self.infos if infos is None else infos))
         self.template = Template(self, *args, t_name=self.domain, **kwargs,)
         context.update({'domain': self.domain, 'name': self.name})
         instructs += self.template.load(context, *args, infos=infos, **kwargs,)
