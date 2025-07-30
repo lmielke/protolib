@@ -5,10 +5,10 @@ import os
 import unittest
 import yaml
 
-from protopy.protopy import ExampleClass
+from protopy.protopy import DefaultClass
 import protopy.settings as sts
 
-class Test_ExampleClass(unittest.TestCase):
+class Test_DefaultClass(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.verbose = 0
@@ -24,8 +24,8 @@ class Test_ExampleClass(unittest.TestCase):
             return yaml.safe_load(f)
 
     def test___str__(self):
-        pc = ExampleClass(pg_name="protopy", py_version="3.7")
-        expected = "ExampleClass: protopy"
+        pc = DefaultClass(pg_name="protopy", py_version="3.7")
+        expected = "DefaultClass: protopy"
         self.assertEqual(str(pc), expected)
         logging.info("Info level log from the test")
 

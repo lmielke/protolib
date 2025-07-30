@@ -203,7 +203,6 @@ class FunctionToJson:
 
     def _find_method(self, cl_name: str, mth_name: str, module: object) -> Callable:
         found_class = getattr(module, cl_name.replace('Test_', ''), None)
-        print(f"Searching for class '{cl_name.replace('Test_', '')}' in module '{module.__name__}'")
         if found_class:
             return getattr(found_class, mth_name.replace('test_', ''), None)
         else:

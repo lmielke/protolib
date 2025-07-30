@@ -6,7 +6,7 @@ from tabulate import tabulate as tb
 from colorama import Fore, Style
 
 import protopy.settings as sts
-from protopy.protopy import ExampleClass
+from protopy.protopy import DefaultClass
 from protopy.helpers.tree import Tree
 from protopy.helpers.import_info import main as import_info
 from protopy.helpers.package_info import pipenv_is_active

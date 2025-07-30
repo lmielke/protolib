@@ -1,24 +1,24 @@
 {
     "base": {
-        "name": "ExampleClass.__str__",
-        "description": "\nString representation of the ExampleClass instance.\n\nReturns:\n    str: The string representation of the class instance.\n",
+        "name": "DefaultClass.__str__",
+        "description": "\nString representation of the DefaultClass instance.\n\nReturns:\n    str: The string representation of the class instance.\n",
         "import_path": "protopy.protopy",
         "module_path": "C:\\Users\\lars\\python_venvs\\packages\\protolib\\protopy\\protopy.py",
         "parameters": {
             "type": "object",
             "properties": {}
         },
-        "body": "def __str__(self, *args, **kwargs) -> str:\n        \"\"\"\n        String representation of the ExampleClass instance.\n\n        Returns:\n            str: The string representation of the class instance.\n        \"\"\"\n        return f\"ExampleClass: {self.pg_name}\"",
+        "body": "def __str__(self, *args, **kwargs) -> str:\n        \"\"\"\n        String representation of the DefaultClass instance.\n\n        Returns:\n            str: The string representation of the class instance.\n        \"\"\"\n        return f\"DefaultClass: {self.pg_name = }\"",
         "returns": "string",
-        "example": "@FunctionToJson(schemas={\"openai\"}, write=True)\n    def test___str__(self):\n        pc = ExampleClass(pr_name=\"protolib\", pg_name=\"protopy\", py_version=\"3.7\")\n        expected = \"ExampleClass: protopy\"\n        self.assertEqual(str(pc), expected)\n        logging.info(\"Info level log from the test\")"
+        "example": "@FunctionToJson(schemas={\"openai\"}, write=True)\n    def test___str__(self):\n        pc = DefaultClass(pr_name=\"protolib\", pg_name=\"protopy\", py_version=\"3.7\")\n        expected = \"DefaultClass: self.pg_name = 'protopy'\"\n        self.assertEqual(str(pc), expected)\n        logging.info(\"Info level log from the test\")"
     },
     "execution": {
         "import_path": "protopy.protopy",
         "module_path": "C:\\Users\\lars\\python_venvs\\packages\\protolib\\protopy\\protopy.py"
     },
     "openai": {
-        "name": "ExampleClass.__str__",
-        "description": "def __str__(self, *args, **kwargs) -> str:\n        \"\"\"\n        String representation of the ExampleClass instance.\n\n        Returns:\n            str: The string representation of the class instance.\n        \"\"\"\n        return f\"ExampleClass: {self.pg_name}\"",
+        "name": "DefaultClass.__str__",
+        "description": "def __str__(self, *args, **kwargs) -> str:\n        \"\"\"\n        String representation of the DefaultClass instance.\n\n        Returns:\n            str: The string representation of the class instance.\n        \"\"\"\n        return f\"DefaultClass: {self.pg_name = }\"",
         "parameters": {
             "type": "object",
             "properties": {},

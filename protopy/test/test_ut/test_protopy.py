@@ -6,11 +6,11 @@ import os
 import unittest
 import yaml
 
-from protopy.protopy import ExampleClass
+from protopy.protopy import DefaultClass
 from protopy.helpers.function_to_json import FunctionToJson
 import protopy.settings as sts
 
-class Test_ExampleClass(unittest.TestCase):
+class Test_DefaultClass(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.verbose = 0
@@ -21,8 +21,8 @@ class Test_ExampleClass(unittest.TestCase):
 
     @FunctionToJson(schemas={"openai"}, write=True)
     def test___str__(self):
-        pc = ExampleClass(pr_name="protolib", pg_name="protopy", py_version="3.7")
-        expected = "ExampleClass: protopy"
+        pc = DefaultClass(pr_name="protolib", pg_name="protopy", py_version="3.7")
+        expected = "DefaultClass: self.pg_name = 'protopy'"
         self.assertEqual(str(pc), expected)
         logging.info("Info level log from the test")
 
