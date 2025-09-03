@@ -13,6 +13,9 @@ psutil = "*"
 jinja2 = "*"
 setuptools = "*"
 graphviz = "*"
+python-dotenv = "*"
+pyttsx3 = "*"
+pyperclip = "*"
 
 [dev-packages]
 graphviz = "*"

@@ -203,7 +203,7 @@ def color_expert(name, role, *args, **kwargs):
     try:
         color = sts.experts.get(name.lower(), {}).color_code
     except AttributeError:
-        color = sts.RED
+        color = Fore.RED
     name = f"{sts.watermark if role == 'agent' else ''} {color}{name}:{Style.RESET_ALL}"
     return name
 
@@ -219,7 +219,7 @@ def colorize_code_blocks(code_blocks:dict, *args, **kwargs):
 
 def _decolorize(line, *args, **kwargs):
     line = line.replace(Fore.YELLOW, "").replace(Fore.BLUE, "").replace(Fore.GREEN, "")
-    line = line.replace(sts.RED, "").replace(Fore.CYAN, "").replace(Fore.WHITE, "")
+    line = line.replace(Fore.RED, "").replace(Fore.CYAN, "").replace(Fore.WHITE, "")
     line = line.replace(sts.DIM, "").replace(Fore.RESET, "").replace(Style.RESET_ALL, "")
     return line
 

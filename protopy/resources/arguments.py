@@ -20,6 +20,17 @@ def mk_args():
                                     f"see protopy.apis"
                                 )
                         )
+    
+    parser.add_argument(
+        "--port",
+        required=False,
+        nargs=None,
+        const=None,
+        type=str,
+        default=None,
+        help=f"Port to run server.pyw on i.e. 9005"
+    )
+
     parser.add_argument(
         "-i",
         "--infos",

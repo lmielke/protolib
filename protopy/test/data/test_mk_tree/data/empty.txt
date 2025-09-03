@@ -1,5 +1,0 @@
-empty.txt
-
-Placeholder file for testhelper.test_setup in case no testfile is used.
-
-DO NOT DELETE !!!

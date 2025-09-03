@@ -1,42 +1,58 @@
 # info.py
 import subprocess
-import os, sys
-import requests
+import fnmatch, os, sys
+import pyperclip, requests
 from tabulate import tabulate as tb
 from colorama import Fore, Style
 
 import protopy.settings as sts
-from protopy.protopy import DefaultClass
 from protopy.helpers.tree import Tree
 from protopy.helpers.import_info import main as import_info
 from protopy.helpers.package_info import pipenv_is_active
 
+from protopy.creator.clone import clone_info # clone_remove_line
+
 all_infos = {"python", "package"}
 
 
-def collect_infos(msg:str, info_list:list=[]):
-    info_list.append(str(msg))
+def collect_infos(msg: str, init=False, info_list: list = []) -> list:
+    if init: info_list.clear()
+    if msg: info_list.append(str(msg))
     return info_list
 
+
 def get_infos(*args, verbose, infos: set = set(), **kwargs):
+    collect_infos('', True)
     if infos:
         for info in infos:
             try:
                 getattr(sys.modules[__name__], f"{info}_info")(*args, verbose=verbose, **kwargs)
-            except AttributeError:
-                print(f"{Fore.YELLOW}Warning:{Fore.RESET} {info}_info function not found. Skipping...")
+            except Exception as e:
+                print(
+                    f"{Fore.RED}ERROR:{Fore.RESET} in {info}_info {e = }. Skipping..."
+                )
     collect_infos(
-                    f"{Fore.YELLOW}\nfor more infos: "
-                    f"{Style.RESET_ALL}proto info -i {all_infos} or -v 1-3"
-            )
+        f"{Fore.YELLOW}\nfor more infos: {Style.RESET_ALL}proto info "
+        f"{Fore.YELLOW}-i{Style.RESET_ALL} {all_infos} "
+        f"{Fore.YELLOW}-v{Style.RESET_ALL} 1-3"
+    )
+    cloning_info(*args, verbose=verbose, **kwargs) # clone_remove_line
     user_info(*args, **kwargs)
+    server_info(*args, **kwargs)
 
+def cloning_info(*args, verbose: int = 0, **kwargs):                    # clone_remove_line
+    collect_infos(f"\n{Fore.YELLOW}{f' CLONE INFO ':-^80}{Fore.RESET} ")# clone_remove_line
+    collect_infos(clone_info(*args, **kwargs))                          # clone_remove_line
+                                                                        # clone_remove_line
 def user_info(*args, **kwargs):
     msg = f"""\n{f" PROTOPY USER info ":#^80}"""
     collect_infos(f"{Fore.GREEN}{msg}{Style.RESET_ALL}")
-    # how to clone infos                         # clone_remove_line
-    from protopy.creator.clone import clone_info # clone_remove_line
-    collect_infos(clone_info(*args, **kwargs))   # clone_remove_line
+
+def server_info(*args, **kwargs):
+    msg = f"{Fore.YELLOW}Modify User settings{Fore.RESET}: {sts.user_settings_path}!\n"
+    collect_infos(msg)
+    msg = f"{Fore.YELLOW}serve:{Fore.RESET} proto server {Style.DIM}# port is {sts.port}{Style.RESET_ALL}\n"
+    collect_infos(msg)
 
 def python_info(*args, **kwargs):
     collect_infos(f"""\n{Fore.YELLOW}{f" PYTHON info ":#^80}{Style.RESET_ALL}""")
@@ -44,38 +60,51 @@ def python_info(*args, **kwargs):
     with open(os.path.join(sts.project_dir, "Pipfile"), "r") as f:
         collect_infos(f.read())
 
-
-def package_info(*args, verbose:int=0, **kwargs):
-    collect_infos(f"""\n{Fore.YELLOW}{f" PROJECT info ":#^80}{Style.RESET_ALL}""")
+def package_info(*args, verbose: int = 0, **kwargs):
+    collect_infos(f"""\n{Fore.YELLOW}{f" PACKAGE info ":#^80}{Style.RESET_ALL}""")
     collect_infos(f"\n{sts.project_name = }\n{sts.package_dir = }\n{sts.test_dir = }")
     collect_infos(f"\n\n{sts.project_dir = }")
     collect_infos(f"{sts.package_name = }\n")
     collect_infos(
-                    (
-                        f"$PWD: {os.getcwd()}\n"
-                        f"$EXE: {sys.executable} -> {pipenv_is_active(sys.executable) = }\n"
-                        )
+        (
+            f"$PWD: {os.getcwd()}\n"
+            f"$EXE: {sys.executable} -> {pipenv_is_active(sys.executable) = }\n"
         )
-    ignores = sts.ignore_dirs | {'gp', 'models'}
-    collect_infos(f"{Tree().mk_tree(sts.project_dir, colorized=True, ignores=ignores)}\n")
+    )
+    tree = (Tree(*args, verbose=verbose, **kwargs)(sts.project_dir,
+                                                                colorized=True,
+                                                                ignores=sts.ignore_dirs,
+                                                                verbose=verbose)
+    )
+    collect_infos(f"{tree.get('tree')}\n")
+    if verbose:
+        collect_infos(f"{tree.get('contents')}\n")
     try:
         collect_infos(
-                    subprocess.run(f"bady -h".split(), text=True,
-                                        stdout=subprocess.PIPE,
-                                        stderr=subprocess.PIPE,
-                    ).stdout
+            subprocess.run(
+                f"proto -h".split(),
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+            ).stdout
         )
     except Exception as e:
         print(f"{Fore.RED}Error:{Fore.RESET} {e}")
-    collect_infos( f"Project import structure:\n"
-                   f"{import_info(main_file_name='protopy.py', verbose=0, )}" )
+    collect_infos(
+        f"Project import structure:\n" f"{import_info(main_file_name='protopy.py', verbose=0, )}"
+    )
     with open(os.path.join(sts.project_dir, "Readme.md"), "r") as f:
         collect_infos(f"\n<readme>\n{f.read()}\n</readme>\n")
         # package help
 
-def main(*args, **kwargs):
+
+def main(*args, clip=None, **kwargs) -> str:
     get_infos(*args, **kwargs)
-    out = '\n'.join(collect_infos(f'info.main({kwargs})'))
-    # print(f'info.main({kwargs})')
-    # sys.stdout.write(f'info.main({kwargs})')
+    out = "\n".join(collect_infos(f"info.main({kwargs})"))
+    if clip:
+        pyperclip.copy(out)
+        print(f"{Fore.GREEN}Copied to clipboard!{Style.RESET_ALL}")
     return out
+
+if __name__ == "__main__":
+    main(verbose=2, infos=all_infos, clip=False)

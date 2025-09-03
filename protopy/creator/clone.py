@@ -8,30 +8,102 @@ from typing import List, Dict, Tuple
 # needed for cloning - aliased to avoid confusion with this script's own main()
 from protopy.creator.archive import main as archive_main
 
-project_params = {"pr_name": "protolib", "pg_name": "protopy", "alias": "proto", }
+DEFAULT_PORT = 9001
+project_params = {
+    "pr_name": "protolib",
+    "pg_name": "protopy",
+    "alias": "proto",
+    "port": str(DEFAULT_PORT),  # <- add this
+}
+
 
 path_patterns = {
     'file_patterns': [r'.*\.log$', r'.*\.lock$', r'.*\.tmp$', r'^temp.*', r'^clone\.py$'],
 }
 
+# --- fast python version discovery (py, pyenv-win, PATH) ---------------------
+_VER_RX = re.compile(r"Python\s+(\d+\.\d+\.\d+)")
+
+def _run(*args, cmd: list[str], **kwargs) -> str:
+    try: return subprocess.check_output(cmd, stderr=subprocess.STDOUT).decode().strip()
+    except Exception: return ""
+
+def _from_py_launcher(*args, **kwargs) -> set[str]:
+    out = _run(cmd=["py", "-0p"])
+    return {ln.split(": ", 1)[-1] for ln in out.splitlines() if ": " in ln}
+
+def _from_pyenv(*args, **kwargs) -> set[str]:
+    root = os.path.join(os.path.expanduser("~"), ".pyenv", "pyenv-win", "versions")
+    if not os.path.isdir(root): return set()
+    exes = set()
+    for d in os.listdir(root):
+        p = os.path.join(root, d, "python.exe")
+        if os.path.exists(p): exes.add(p)
+    return exes
+
+def _from_path(*args, **kwargs) -> set[str]:
+    names = [f"python{s}.exe" for s in ("", "3", "3.11", "3.12", "3.13")]
+    out = set()
+    for p in os.environ.get("PATH", "").split(";"):
+        if not p or not os.path.exists(p): continue
+        for n in names:
+            exe = os.path.join(p, n)
+            if os.path.exists(exe): out.add(os.path.abspath(exe))
+    return out
+
+def _version_of(*args, exe: str, **kwargs) -> str | None:
+    m = _VER_RX.search(_run(cmd=[exe, "--version"]))
+    return m.group(1) if m else None
+
+def get_installed_py_versions(*args, **kwargs) -> list[str]:
+    """
+    WHY: Fast & robust. Returns unique X.Y and X.Y.Z strings detected on this host.
+    """
+    exes = set().union(_from_py_launcher(), _from_pyenv(), _from_path())
+    vers = set()
+    for e in exes:
+        v = _version_of(exe=e)
+        if not v: continue
+        mm = ".".join(v.split(".")[:2])
+        vers.add(v); vers.add(mm)
+    # numeric sort for "3.9" < "3.10" < "3.11.9"
+    def _k(s: str): return tuple(int(x) for x in s.split("."))
+    return sorted(vers, key=_k)
+
 def clone_info(*args, **kwargs):
     """
-    Helps user to understand how to use clone.py and which paramets to use for cloning
-    proto clone -pr 'badylib' -n 'badypack' -a 'bady' -t '/temp' -p 3.11
+    Helps user to understand how to use clone.py and which parameters to use.
     """
-    msg = (f"\n{Fore.WHITE}{f' CLONE INFO ':-^80}{Fore.RESET} ")
-    msg += (
-        f"\n{Fore.YELLOW}NOTE:{Fore.RESET} "
-        f"to clone protopy use proto clone like this:\n\n"
-        f"proto clone "
+    full_versions = sorted({
+        v for v in get_installed_py_versions() if len(v.split(".")) == 3
+    }, key=lambda s: tuple(map(int, s.split("."))))
+    example = next((v for v in reversed(full_versions) if v.count(".") == 2), None)
+    short = ".".join(example.split(".")[:2]) if example else "3.11"
+    shown = ", ".join(full_versions)
+
+    msg = (
+        f"{Fore.YELLOW}NOTE, to Clone the package use:{Fore.RESET}\n\n"
+        f"\tproto clone "
         f"{Fore.YELLOW}-pr{Fore.RESET} 'badylib' "
         f"{Fore.YELLOW}-n{Fore.RESET} 'badypackage' "
         f"{Fore.YELLOW}-a{Fore.RESET} 'bady' "
         f"{Fore.YELLOW}-t{Fore.RESET} '/temp' "
-        f"{Fore.YELLOW}-p{Fore.RESET} '3.11'\n"
-        f"where: {Fore.YELLOW}-pr{Fore.RESET} [name of project directory], "
-        f"{Fore.YELLOW}-n{Fore.RESET} [package name], {Fore.YELLOW}-a{Fore.RESET} [alias] "
-        f"{Fore.YELLOW}-t{Fore.RESET} [target directory], {Fore.YELLOW}-p{Fore.RESET} [python version]\n"
+        f"{Fore.YELLOW}-p{Fore.RESET} '{example}' "
+        f"{Fore.YELLOW}--port{Fore.RESET} 9006 "
+        f"{Fore.YELLOW}--install\n\n"
+        f"Parameter Explained: \n"
+        f"\t{Fore.CYAN}Mandatory:{Fore.RESET} \n"
+        f"\t{Fore.YELLOW}-pr{Fore.RESET} [name of target project], \n"
+        f"\t{Fore.YELLOW}-n{Fore.RESET} [package name used inside project],  \n"
+        f"\t{Fore.YELLOW}-a{Fore.RESET} [package alias],  \n"
+        f"\t{Fore.YELLOW}-t{Fore.RESET} [target directory],  \n"
+        f"\t{Fore.YELLOW}--port{Fore.RESET} [HTTP port for server.py]\n"
+        f"\t{Fore.CYAN}Optionals:{Fore.RESET} \n"
+        f"\t{Fore.YELLOW}-p{Fore.RESET} [Python version for env]  \n"
+        f"\t{Fore.YELLOW}--install{Fore.RESET} [run pipenv install]\n"
+        f"\nAvailable Python versions: {Fore.CYAN}{shown}{Fore.RESET}\n"
+        f"{Fore.YELLOW}Note:{Fore.RESET} You can also use short versions like "
+        f"{Fore.CYAN}{short}{Fore.RESET} if they map to a valid patch (e.g. {example})."
     )
     return msg
 
@@ -67,9 +139,9 @@ def set_python_version_in_pipfile(pipfile_path: str, *args, py_version: str = No
                 print(f"{Fore.YELLOW}\tWarning: 'python_version' line not found in Pipfile {pipfile_path}. Version not set.{Fore.RESET}")
                 print(f"{Fore.YELLOW}\tPlease ensure your Pipfile has a '[requires]' section with 'python_version'.{Fore.RESET}")
     except FileNotFoundError:
-        print(f"{sts.RED}\tError: Pipfile not found at {pipfile_path}{Fore.RESET}")
+        print(f"{Fore.RED}\tError: Pipfile not found at {pipfile_path}{Fore.RESET}")
     except Exception as e:
-        print(f"{sts.RED}\tError updating Pipfile {pipfile_path}: {e}{Fore.RESET}")
+        print(f"{Fore.RED}\tError updating Pipfile {pipfile_path}: {e}{Fore.RESET}")
 
 
 def rename_files(root: str, file_names: List[str], file_rules: Dict[str, str]) -> None:
@@ -136,7 +208,7 @@ def remove_files(root: str, file_names: List[str], file_patterns: List[str]) -> 
                     os.remove(file_path)
                     time.sleep(.1) # Brief pause, possibly for filesystem to catch up or visual effect
                 except OSError as e:
-                    print(f"{sts.RED}\tError removing file {file_path}: {e}{Fore.RESET}")
+                    print(f"{Fore.RED}\tError removing file {file_path}: {e}{Fore.RESET}")
 
 
 def initalize(tgt_dir: str, new_pr_name: str, new_pg_name: str, new_alias: str, yes: bool = False, **kwargs) -> Tuple[str, str, str, str]:
@@ -192,13 +264,13 @@ def initalize(tgt_dir: str, new_pr_name: str, new_pg_name: str, new_alias: str, 
     
     if not yes: # If -y or similar flag was not passed to skip confirmation
         if input(confirmation_message).strip().lower() == "n":
-            print(f"{sts.RED}Operation canceled by user.{Fore.RESET}")
+            print(f"{Fore.RED}Operation canceled by user.{Fore.RESET}")
             sys.exit() # Use sys.exit for cleaner exit
 
     if 'protopy' in new_pr_dir_path and 'protopy' not in os.path.abspath(sts.project_dir): # Basic safety check
         # This check might need refinement. Avoid modifying the source 'protopy' if it's the template.
         # If 'new_pr_dir_path' IS the source protopy, something is wrong.
-        print(f"{sts.RED}Safety check: Target directory appears to be related to 'protopy' itself in an unexpected way.")
+        print(f"{Fore.RED}Safety check: Target directory appears to be related to 'protopy' itself in an unexpected way.")
         print(f"Target: {new_pr_dir_path}{Fore.RESET}")
         print(f"To avoid accidental data loss, please choose a different target directory or project name.")
         sys.exit()
@@ -234,7 +306,7 @@ def copy_resources(tgt_dir: str, new_pr_name: str, pg_name:str='protopy') -> Non
     print(f"Found:{Fore.YELLOW}{os.listdir(pg_dir)}{Fore.RESET}")
 
     # Copy arguments.py and settings.py from resources to the package directory
-    for file_name in ["arguments.py"]:
+    for file_name in ["arguments.py", "settings.py", "Reamde.md"]:
         src_file_path = os.path.join(resources_dir, file_name)
         tgt_file_path = os.path.join(tgt_dir, new_pr_name, pg_name, file_name)
 
@@ -248,7 +320,7 @@ def copy_resources(tgt_dir: str, new_pr_name: str, pg_name:str='protopy') -> Non
         shutil.rmtree(resources_dir)
         print(f"{Fore.GREEN}Removed resources directory: {resources_dir}{Fore.RESET}")
     except Exception as e:
-        print(f"{sts.RED}Error removing resources directory {resources_dir}: {e}{Fore.RESET}")
+        print(f"{Fore.RED}Error removing resources directory {resources_dir}: {e}{Fore.RESET}")
         # Optionally, handle specific exceptions like FileNotFoundError or PermissionError if needed
 
 
@@ -278,7 +350,7 @@ def replace_text_in_files(root: str, file_names: List[str], text_repls: Dict[str
                         file.write(new_contents)
                     print(f"{Fore.GREEN}\tUpdated text in:{Fore.RESET} {file_name}")
             except Exception as e: # Catch more general exceptions during file processing
-                print(f"{sts.RED}\tError processing file {file_path}: {e}{Fore.RESET}")
+                print(f"{Fore.RED}\tError processing file {file_path}: {e}{Fore.RESET}")
 
 def remove_lines_in_files(root: str, file_names: List[str], *args, **kwargs) -> None:
     marker = '# clone_remove_line'
@@ -291,10 +363,10 @@ def remove_lines_in_files(root: str, file_names: List[str], *args, **kwargs) -> 
                 # If the file contains the specific line to remove, process it
                 new_contents, removed_lines = [], []
                 for line in file_contents.splitlines():
-                    if marker not in line: # Skip lines with this marker
-                        new_contents.append(line)
-                    else:
+                    if marker in line: # Skip lines with this marker
                         removed_lines.append(line)
+                    else:
+                        new_contents.append(line)
                 new_contents = '\n'.join(new_contents)
                 with open(file_path, 'w', encoding='utf-8') as file:
                     file.write(new_contents)
@@ -327,7 +399,7 @@ def setup_project(n_pr_dir: str, n_pg_name: str, *args, py_version: str = None, 
     try:
         subprocess.check_call(setup_cmd, cwd=n_pr_dir) # Use check_call to raise error on failure
     except subprocess.CalledProcessError as e:
-        print(f"{sts.RED}Build failed: {e}{Fore.RESET}")
+        print(f"{Fore.RED}Build failed: {e}{Fore.RESET}")
         return # Stop if build fails
 
     # List tar.gz (optional, for verification)
@@ -362,7 +434,7 @@ def setup_project(n_pr_dir: str, n_pg_name: str, *args, py_version: str = None, 
 
     print(f"{Fore.CYAN}\nInstalling project environment using pipenv...{Fore.RESET}")
     if py_version is None:
-        print(f"{sts.RED}Python version (-p) is required to set up the pipenv environment with --install.{Fore.RESET}")
+        print(f"{Fore.RED}Python version (-p) is required to set up the pipenv environment with --install.{Fore.RESET}")
         print(f"{Fore.YELLOW}Skipping pipenv install due to missing Python version.{Fore.RESET}")
         return
 
@@ -371,10 +443,10 @@ def setup_project(n_pr_dir: str, n_pg_name: str, *args, py_version: str = None, 
     try:
         subprocess.check_call(pipenv_cmd, cwd=n_pr_dir)
     except subprocess.CalledProcessError as e:
-        print(f"{sts.RED}Pipenv install failed: {e}{Fore.RESET}")
+        print(f"{Fore.RED}Pipenv install failed: {e}{Fore.RESET}")
         return
     except FileNotFoundError:
-        print(f"{sts.RED}'pipenv' command not found. Please ensure pipenv is installed and in your PATH.{Fore.RESET}")
+        print(f"{Fore.RED}'pipenv' command not found. Please ensure pipenv is installed and in your PATH.{Fore.RESET}")
         return
 
     # Test installation (basic import test or running actual tests)
@@ -438,7 +510,8 @@ def clone_and_install(*args, **kwargs_received): # Renamed kwargs for clarity
     new_params_for_replacement = {
         "pr_name": new_pr_name,
         "pg_name": new_pg_name,
-        "alias": new_alias
+        "alias": new_alias,
+        "port": str(kwargs_received.get('port')),
     }
     text_replacements = manage_replacements(project_params, new_params_for_replacement)
     
@@ -499,22 +572,43 @@ def clone_and_install(*args, **kwargs_received): # Renamed kwargs for clarity
         install=current_install_flag
     )
 
+def run_checks(*args, install: bool = False, py_version: str = None,
+               port: str | int = None, **kwargs) -> None:
+    """Checks python version format and required port."""
+    print(f"{Fore.CYAN}Running pre-checks: install={install}, "
+          f"py_version='{py_version or 'Not set'}', port='{port}'{Fore.RESET}")
 
-def run_checks(*args, install: bool = False, py_version: str = None, **kwargs) -> None:
-    """Checks python version format and if version is provided when install flag is true."""
-    print(f"{Fore.CYAN}Running pre-checks: install={install}, py_version='{py_version or 'Not set'}'{Fore.RESET}")
-    if install:
-        if py_version is None:
-            print(f"{sts.RED}Error: Python version (-p) must be specified when using the install flag.{Fore.RESET}")
-            sys.exit() # Exit if install is requested without a python version
-    
-    if py_version is not None:
-        if not re.match(r'^\d+\.\d+(\.\d+)?$', py_version): # Allow for patch version e.g. 3.11.4
-            print((
-                f"{sts.RED}Error: Invalid Python version format for -p: '{py_version}'. Expected e.g., '3.11' or '3.11.4'.{Fore.RESET}"
-            ))
+    if port is None:
+        print(f"{Fore.RED}Error: --port is required (e.g., --port 9006).{Fore.RESET}")
+        sys.exit()
+    try:
+        port_i = int(port)
+        if not (1 <= port_i <= 65535):
+            raise ValueError
+    except Exception:
+        print(f"{Fore.RED}Error: invalid --port '{port}'. Use 1..65535.{Fore.RESET}")
+        sys.exit()
+
+    if install and py_version is None:
+        print(f"{Fore.RED}Error: Python version (-p) must be specified when using the "
+              f"install flag.{Fore.RESET}")
+        sys.exit()
+
+    if py_version is None: return
+    if not re.match(r'^\d+\.\d+(\.\d+)?$', py_version):
+        print((f"{Fore.RED}Error: Invalid Python version for -p: '{py_version}'. "
+               f"Expected '3.11' or '3.11.4'.{Fore.RESET}"))
+        sys.exit()
+
+    available = set(get_installed_py_versions())
+    if py_version not in available:
+        mm = ".".join(py_version.split(".")[:2])
+        if mm not in available:
+            print(f"{Fore.RED}Error: Python '{py_version}' not found on this system."
+                  f"{Fore.RESET}")
+            print(f"{Fore.YELLOW}Available: "
+                  f"{', '.join(get_installed_py_versions())}{Fore.RESET}")
             sys.exit()
-
 
 def main(*args, api:str=None, **kwargs) -> str:
     """
@@ -561,7 +655,7 @@ if __name__ == '__main__':
     # Mock sts.project_dir if not available or to control source for testing
     # Ensure sts.project_dir points to a valid template project structure.
     if not hasattr(sts, 'project_dir') or not os.path.isdir(sts.project_dir):
-         print(f"{sts.RED}sts.project_dir is not a valid directory. Mocking or aborting.{Fore.RESET}")
+         print(f"{Fore.RED}sts.project_dir is not a valid directory. Mocking or aborting.{Fore.RESET}")
          # Create a dummy sts.project_dir for basic test run
          dummy_template_path = os.path.join(os.path.dirname(__file__), "dummy_protopy_template_for_clone_test")
          if not os.path.exists(dummy_template_path):
@@ -585,8 +679,8 @@ if __name__ == '__main__':
     try:
         main(**test_kwargs)
     except SystemExit:
-        print(f"{sts.RED}Script exited early (e.g., due to user cancellation or error in checks).{Fore.RESET}")
+        print(f"{Fore.RED}Script exited early (e.g., due to user cancellation or error in checks).{Fore.RESET}")
     except Exception as e:
-        print(f"{sts.RED}An unexpected error occurred during direct test run: {e}{Fore.RESET}")
+        print(f"{Fore.RED}An unexpected error occurred during direct test run: {e}{Fore.RESET}")
         import traceback
         traceback.print_exc()

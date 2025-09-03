@@ -73,7 +73,17 @@ def mk_args():
         const=None,
         type=str,
         default=None,
-        help=(f"python version placed inside your Pipfile."),
+        help=f"python version placed inside your Pipfile.",
+    )
+
+    parser.add_argument(
+        "--port",
+        required=False,
+        nargs=None,
+        const=None,
+        type=str,
+        default=None,
+        help=f"Port to run server.pyw on i.e. 9005"
     )
 
     parser.add_argument(

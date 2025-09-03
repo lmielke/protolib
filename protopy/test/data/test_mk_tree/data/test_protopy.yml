@@ -1,4 +1,0 @@
-verbose: 0
-pg_name: protopy
-tgt_dir: /temp
-pg_alias: proto

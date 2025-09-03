@@ -9,8 +9,6 @@ import os
 import re
 import time
 from datetime import datetime as dt
-
-# Third-party imports in alphabetical order
 import yaml
 
 # Local application imports in alphabetical order
@@ -25,15 +23,6 @@ class DefaultClass:
     def __init__(self, *args, pg_name: str = None, verbose: int = 0, **kwargs) -> None:
         """
         Initializes DefaultClass with the following attributes.
-
-        Args:
-            pg_name (str): Name of the project.
-            verbose (int): Verbosity level.
-                Options:
-                    - 0: no output
-                    - 1: some output
-                    - 2: more output
-                    - 3: full output
         """
         self.verbose = verbose
         self.pg_name = pg_name
