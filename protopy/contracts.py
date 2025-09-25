@@ -2,13 +2,15 @@
 import protopy.settings as sts
 import os, sys
 import protopy.arguments as arguments
+from protopy.helpers.dir_context import DirContext
 from colorama import Fore, Style
 
 
 def checks(*args, **kwargs):
     kwargs = clean_kwargs(*args, **kwargs)
     check_missing_kwargs(*args, **kwargs)
-    kwargs.update(check_target_dir(*args, **kwargs))# clone_remove_line
+    kwargs.update(get_package_data(*args, **kwargs))
+    kwargs.update(clean_paths(*args, **kwargs))
     check_env_vars(*args, **kwargs)
     return kwargs
 
@@ -22,7 +24,6 @@ def check_env_vars(*args, **kwargs):
         from dotenv import load_dotenv
         env_file = os.path.join(sts.project_dir, ".env")
         load_dotenv(env_file)
-
 
 def clean_kwargs(*args, **kwargs):
     # kwargs might come from a LLM api and might be poluted with whitespaces ect.
@@ -55,30 +56,35 @@ def check_missing_kwargs(*args, api,  **kwargs):
         print(f"{Fore.YELLOW}Required arguments are: {requireds}{Style.RESET_ALL}")
         exit()
 
-def check_target_dir(*args, api:str, tgt_dir:str=None, **kwargs):# clone_remove_line
-    """# clone_remove_line
-    First tries to resolve absolute path from the given target directory.# clone_remove_line
-    Then checks if the target directory exists and is writable.# clone_remove_line
-    """# clone_remove_line
-    if api != 'clone':# clone_remove_line
-        return {}# clone_remove_line
-    if tgt_dir is None:# clone_remove_line
-        raise ValueError("Target directory must be specified")# clone_remove_line
-    tgt_dir = tgt_dir.replace('/', os.sep)# clone_remove_line
-    if tgt_dir == '.' or tgt_dir == './':# clone_remove_line
-        tgt_dir = os.getcwd()# clone_remove_line
-    if tgt_dir == '..' or tgt_dir == '../':# clone_remove_line
-        tgt_dir = os.path.dirname(os.getcwd())# clone_remove_line
-    elif tgt_dir.startswith('~'):# clone_remove_line
-        tgt_dir = os.path.expanduser(tgt_dir)# clone_remove_line
-    elif tgt_dir.startswith(f".{os.sep}"):# clone_remove_line
-        # relative path from current working directory# clone_remove_line
-        tgt_dir = os.path.join(os.getcwd(), tgt_dir[2:])# clone_remove_line
-    # we convert path to absolute path# clone_remove_line
-    tgt_dir = os.path.abspath(tgt_dir)# clone_remove_line
-    # now we check if the target directory exists# clone_remove_line
-    if not os.path.exists(tgt_dir):# clone_remove_line
-        raise FileNotFoundError(f"Target directory '{tgt_dir}' does not exist")# clone_remove_line
-    if sts.project_dir in tgt_dir:# clone_remove_line
-        raise ValueError(f"Target directory '{tgt_dir}' is inside the project directory '{sts.project_dir}'")# clone_remove_line
-    return {'tgt_dir': tgt_dir}# clone_remove_line
+def get_package_data(*args, work_dir:str=None, **kwargs) -> dict:
+    """
+    Uses work_dir or cwd to detect package information such as project_dir, package_dir, ect.
+    """
+    work_dir = os.path.abspath(work_dir if work_dir is not None else os.getcwd())
+    # traverses the directory structure to find project and package directories
+    ctx = DirContext()(path=work_dir).__dict__
+    # we only return a subset of the context information
+    obj_names = {'pr_name', 'pg_name', 'work_dir', 'project_dir', 'package_dir', 'is_package'}
+    pg_objs = {k: v for k, v in ctx.items() if k in obj_names}
+    return pg_objs
+
+def clean_paths(*args, **kwargs) -> dict:
+    """
+    WHY: Normalize *_dir/*_path and resolve missing files if path doesn't exist.
+    """
+    normalizeds = {}
+    for n, v in kwargs.items():
+        if isinstance(v, str) and any(t in n for t in {"_dir", "_path"}):
+            normalizeds[n] = normalize_path(v, *args, **kwargs)
+    return normalizeds
+
+def normalize_path(path: str, *args, **kwargs) -> str:
+    """
+    WHY: Canonicalize user-supplied paths consistently across OS.
+    """
+    if not path:
+        return path
+    p = os.path.expanduser(path)
+    if not os.path.isabs(p):
+        p = os.path.abspath(os.path.join(os.getcwd(), p))
+    return os.path.normpath(p)

@@ -1,11 +1,21 @@
 # collections.py
-import json, os, re, shutil, subprocess, sys, textwrap, time, yaml
+import json, os, pyttsx3, re, shutil, subprocess, sys, textwrap, time, yaml
 from contextlib import contextmanager
 from pathlib import Path
 from tabulate import tabulate as tb
 from datetime import datetime as dt
 
 import protopy.settings as sts
+
+def _speak_message(message: str, *args, **kwargs):
+    """Uses pyttsx3 to speak a given message."""
+    try:
+        engine = pyttsx3.init()
+        engine.say(message)
+        engine.runAndWait()
+    except Exception as e:
+        logging.error(f"Text-to-speech failed: {e}")
+
 
 def unalias_path(work_path: str) -> str:
     """
@@ -33,7 +43,6 @@ def _handle_integer_keys(self, intDict) -> dict:
     intDict = {int(k) if str(k).isnumeric() else k: vs for k, vs in intDict.items()}
     return intDict
 
-
 def prep_path(work_path: str, file_prefix=None) -> str:
     work_path = unalias_path(work_path)
     if os.path.exists(work_path):
@@ -47,7 +56,6 @@ def prep_path(work_path: str, file_prefix=None) -> str:
             return work_path
     return f"{name}{extension}"
 
-
 def get_sec_entry(d, matcher, ret="key", current_key=None) -> str:
     if isinstance(d, dict):
         for key, value in d.items():
@@ -59,7 +67,6 @@ def get_sec_entry(d, matcher, ret="key", current_key=None) -> str:
                     return result
     return None
 
-
 def load_yml(testFilePath, *args, **kwargs):
     with open(testFilePath, "r") as f:
         return yaml.safe_load(f)
@@ -68,7 +75,6 @@ def load_yml(testFilePath, *args, **kwargs):
 def load_str(testFilePath, *args, **kwargs):
     with open(testFilePath, "r") as f:
         return f.read()
-
 
 def group_text(text, charLen, *args, **kwargs):
     # performs a conditional group by charLen depending on type(text, list)
@@ -88,32 +94,6 @@ def group_text(text, charLen, *args, **kwargs):
     else:
         print(type(text), text)
     return '\n' + text
-
-def handle_existing_linebreaks(text, *args, **kwargs):
-    text = text.replace('\n', ' <lb> ').replace('\t', ' <tab> ')
-    text = text.replace('#'*29, '#'*5)
-    text = text.replace('-'*29, '-'*5)
-    return text
-
-def restore_existing_linebreaks(text, *args, **kwargs) -> str:
-    """
-    Adds a line break before numbered list items, preserving existing line breaks.
-
-    Args:
-        text (str): The text where line breaks and numbered lists will be adjusted.
-
-    Returns:
-        str: The text with the modified line breaks.
-    """
-    # print(re.findall(r'<lb>\s*(\d+\.\s)', text))
-    text = re.sub(r'(<lb>\s*)(\d+\.\s)', r'\n\2', text)
-    text = re.sub(r'(<lb>\s*)(-\s*)', r'\n\2', text)
-    text = re.sub(r'(<lb>\s*)(<code_block_\d+>\s*)(<lb>\s*)', r'\n\2\n', text)
-    text = re.sub(r'\n(\n\d+\.\s|\n-\s|\n<code_block_\d+\s)', r'\1', text)
-    # print(f"restore_existing_linebreaks: \n{text = }")
-    text = re.sub(r'\n<lb>\s*', r'\n', text)
-    text = re.sub(r'\s*<lb>\s*', r' ', text)
-    return text
 
 def collect_ignored_dirs(source, ignore_dirs, *args, **kwargs):
     """
@@ -149,7 +129,6 @@ def custom_ignore(ignored):
     def _ignore_func(dir, cs):
         return set(c for c in cs if os.path.join(dir, c) in ignored)
     return _ignore_func
-
 
 @contextmanager
 def temp_chdir(target_dir: str) -> None:
@@ -199,79 +178,11 @@ def to_tbl(data, *args, verbose:int=0, headers=['EXPERT', 'MESSAGE'], tablefmt='
         tbl.append((f"{color_expert(name, role)}\n{mId}", content))
     return tb(tbl, headers=headers, tablefmt=tablefmt)
 
-def color_expert(name, role, *args, **kwargs):
-    try:
-        color = sts.experts.get(name.lower(), {}).color_code
-    except AttributeError:
-        color = Fore.RED
-    name = f"{sts.watermark if role == 'agent' else ''} {color}{name}:{Style.RESET_ALL}"
-    return name
-
-def colorize_code_blocks(code_blocks:dict, *args, **kwargs):
-    # colorize code blocks
-    colorized = {}
-    for name, (language, block) in code_blocks.items():
-        block = f"{sts.code_color}{block}{Style.RESET_ALL}"
-        block = '\t' + block.replace('\n', '\t\t')
-        language = f"{sts.language_color}{language}{Style.RESET_ALL}"
-        colorized[name] = '´´´' + language + '\n\n' + block + '\n\n´´´'
-    return colorized
-
-def _decolorize(line, *args, **kwargs):
-    line = line.replace(Fore.YELLOW, "").replace(Fore.BLUE, "").replace(Fore.GREEN, "")
-    line = line.replace(Fore.RED, "").replace(Fore.CYAN, "").replace(Fore.WHITE, "")
-    line = line.replace(sts.DIM, "").replace(Fore.RESET, "").replace(Style.RESET_ALL, "")
-    return line
-
 def save_table(tbl, *args, **kwargs):
     table_path = os.path.join(sts.chat_logs_dir, f"{sts.session_time_stamp}_chat.log")
     tbl = '\n'.join([_decolorize(l) for l in tbl.split('\n')])
     with open(table_path, 'w', encoding='utf-8') as f:
         f.write(tbl)
-
-
-def hide_tags(text, *args, verbose:int=0, **kwargs):
-    """
-    Takes a string and removes all tag enclosed contents from the string
-
-    Args:
-        text (str): The text to remove tags from.
-        tags (list, optional): The tags to remove. Defaults to None.
-            Options:
-                ['pg_info', ]: removes everything between <pg_info> and </pg_info>
-    """
-    for start, end in sts.tags.values():
-        # the replacement term depends on verbosity. If verbose, add a newline
-        # otherwise remove the tag completely.
-        if verbose == 0:
-            start, replacement = r"\s*" + start, r''
-        elif verbose <= 1:
-            replacement = f"{Fore.CYAN}{start}...{end}{Style.RESET_ALL}"
-        else:
-            replacement = f'\n{Fore.CYAN}\\1{Style.RESET_ALL}\n'
-        # replacement = r'' if verbose < 1 else f"{start}...{end}" if verbose < 2 else r'\n\1\n'
-        # flags must be set to re.DOTALL to match newline characters and multiline strings
-        text = re.sub(fr'({start}.*?{end})', replacement, text, flags=re.DOTALL)
-    return '\n' + text
-
-def prettyfy_instructions(instructs, tag:str='instructs', *args, verbose:int=1, **kwargs):
-    # instructions are cyan
-    if verbose >= 2:
-        prettyfied = group_text(instructs, 70).replace('\n', '\n\t')
-    elif verbose >= 1:
-        prettyfied = group_text(instructs, 70).replace('\n', '\n\t')[:70]
-        prettyfied += f"\n\t...[hidden {len(instructs) - 70} characters], verbose={verbose}"
-    else:
-        return ''
-    return add_tags('\t' + prettyfied, tag)
-
-
-def add_tags(content, tag, *args, **kwargs):
-    """
-    Adds tags to the message content.
-    """
-    start, end, color = sts.tags.get( tag, ('', '', '') )
-    return f"{color}{start}{Fore.RESET}{content}\n{color}{end}{Fore.RESET}"
 
 def strip_ansi_codes(text: str) -> str:
     """
