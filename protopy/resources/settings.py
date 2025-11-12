@@ -93,3 +93,7 @@ def load_user_settings():
 user_settings = load_user_settings()
 # Update the global namespace with user settings
 globals().update(user_settings)
+
+
+table_max_chars = 200
+error_path = os.path.join(resources_dir, "error.log")

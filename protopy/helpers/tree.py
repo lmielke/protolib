@@ -6,36 +6,20 @@ WHY: Minimal, consistent tree builder that honors sts.* settings:
 - Colorization is optional and isolated.
 """
 
-import os, re, fnmatch, contextlib  # stdlib only, fast imports
-from typing import Set, List, Tuple, Dict, Iterable, Optional
+import contextlib, fnmatch, os, re
 from colorama import Fore, Style
+from typing import Set, List, Tuple, Dict, Iterable, Optional
 
+from protopy.helpers.collections import temp_chdir as _temp_chdir
 import protopy.settings as sts
-
-
-try:
-    # Optional helper for atomic chdir during mk_dirs_hierarchy
-    from protopy.helpers.collections import temp_chdir as _temp_chdir
-except Exception:
-    @contextlib.contextmanager
-    def _temp_chdir(path: str):
-        """
-        WHY: Fallback chdir ctx mgr; used only if protopy helper is absent.
-        """
-        cwd = os.getcwd()
-        try:
-            os.chdir(path)
-            yield
-        finally:
-            os.chdir(cwd)
-
 
 styles_dict: Dict[str, Dict[str, Dict[str, object]]] = {
     "default": {
         "dir":  {"sym": "|--",  "col": f"{Fore.WHITE}"},
         "file": {"sym": "|-",   "col": f"{Fore.WHITE}"},
         "fold": {"sym": "▼",    "col": f"{Fore.YELLOW}"},
-        "disc": {"sym": "|...", "col": f"{Style.DIM}{Fore.WHITE}"},
+        "dir_disc":  {"sym": "▶...", "col": f"{Style.DIM}{Fore.WHITE}"},
+        "file_disc": {"sym": "|...", "col": f"{Style.DIM}{Fore.WHITE}"},
         "ext":  {"sym": [".py"], "col": [f"{Fore.BLUE}"]},
     },
 }
@@ -74,19 +58,23 @@ class Tree:
 
     # --- verbosity / style --------------------------------------------------
 
-    def handle_verbosity(self, *args, verbose: int = 0, **kwargs) -> int:
+    def handle_verbosity(self, *args, verbose: int = 0, yes: bool = False, **kwargs) -> int:
         """
-        WHY: Verbosity controls content-dump depth; confirm very large dumps.
+        WHY: Verbosity controls content-dump depth.
+        -y / yes=True disables any interactive questions.
         """
+        if yes:
+            return verbose
+
         if verbose >= 7:
             print(f"{Fore.YELLOW}WARNING: {verbose = } "
-                  f"Output might excede the console length!{Style.RESET_ALL}"
-                  f"{Style.RESET_ALL}")
+                  f"Output might excede the console length!{Style.RESET_ALL}")
             cont = input("Continue with a selected verbosity? "
                          "[1, 2, ..., ENTER keeps current]: ")
             if cont.isdigit():
                 return int(cont)
         return verbose
+
 
     def _apply_style(self, *args, style: str, **kwargs) -> None:
         st = styles_dict.get(style, styles_dict["default"])
@@ -94,95 +82,53 @@ class Tree:
             for k, v in style_map.items():
                 setattr(self, f"{name}_{k}", v)
 
-    # --- public API ---------------------------------------------------------
+        # --- public API ---------------------------------------------------------
 
-    def mk_tree(
-        self,
-        *args,
-        project_dir: str | None = None,
-        max_depth: int | None = 6,
-        ignores: set[str] | None = None,
-        file_match_regex: str | None = None,
-        work_file_name: str | None = None,
-        colorized: bool = False,
-        **kwargs,
-    ) -> tuple[str, str]:
+    def mk_tree(self, *args, project_dir:str=None, max_depth:int=6, ignores:set=None,
+        colorized: bool = False, **kwargs) -> tuple[str, str]:
         """
-        WHY: Walk project_dir, honoring sts.*; return (tree, contents).
+        WHY: Walk project_dir; print dir first, then dir-disc if truncated/ignored.
         """
         self.matched_files.clear()
         self.loaded_files.clear()
-        if project_dir is None and args and isinstance(args[0], str):
-            project_dir = args[0]
-        prj = project_dir or getattr(sts, "project_dir", os.getcwd())
+        prj = (project_dir or (args[0] if args and isinstance(args[0], str) else None)
+               or getattr(sts, "project_dir", os.getcwd()))
         ign = set(ignores) if ignores else set(getattr(sts, "ignore_dirs", set()))
-        self.matched_files.clear()
-
-        tree, contents = ["<hierarchy>"], ["<file_contents>"]
+        tree, contents = ["## Hierarchy"], ["## File Contents"]
         self._out = tree
-        base_level = prj.count(os.sep)
-
+        base = prj.count(os.sep)
         for root, dirs, files in os.walk(prj, topdown=True):
-            level = root.count(os.sep) - base_level
-            subdir = os.path.basename(root)
+            level = root.count(os.sep) - base
+            sub = os.path.basename(root)
             ind = self.indent * level
-
-            if self._is_ignored(subdir, ign):
-                tree.append(f"{ind}{self.disc_sym} {self.fold_sym} {subdir}")
+            tree.append(f"{ind}{self.dir_sym}{self.fold_sym} {sub}")
+            if self._is_ignored(sub, ign) or (max_depth is not None and level >= max_depth):
                 dirs[:] = []
+                tree.append(f"{ind}{self.indent}{self.dir_disc_sym}")
                 continue
-
-            if max_depth is not None and level >= max_depth:
-                tree.append(f"{ind}{self.disc_sym} {self.fold_sym} {subdir}")
-                dirs[:] = []
-                continue
-
-            tree.append(f"{ind}{self.dir_sym}{self.fold_sym} {subdir}")
-            self._emit_files(
-                *args, root=root, files=files, ind=ind, level=level,
-                file_match_regex=file_match_regex, contents=contents, **kwargs,
-            )
-
-        tree.append("</hierarchy>")
-        contents.append("</file_contents>")
-
-        if work_file_name:
-            self._promote_workfile(*args, work_file_name=work_file_name, **kwargs)
-
-        t = "\n".join(tree)
+            self._emit_files(root, files, ind, level, contents, *args, **kwargs )
+        tree.append("\n")
+        contents.append("\n")
+        self._promote_workfile(*args, **kwargs)
+        out = "\n".join(tree)
         if colorized:
-            t = self._colorize(t, *args, **kwargs)
-        return t, "\n".join(contents)
+            out = self._colorize(out, *args, **kwargs)
+        return out, "\n".join(contents)
 
-    # --- emit / matches / contents -----------------------------------------
-
-    def _emit_files(
-        self,
-        *args,
-        root: str,
-        files: Iterable[str],
-        ind: str,
-        level: int,
-        file_match_regex: Optional[str],
-        contents: List[str],
-        **kwargs,
-    ) -> None:
+    def _emit_files(self, root: str, files: str, ind: str, level: int, contents: list, *args,
+        file_match_regex = None, **kwargs) -> None:
         log_dir = self._is_abbrev_dir(root, *args, **kwargs)
         listed = 0
         for f in files:
             if log_dir and listed >= 1:
-                self._line(f"{ind}{self.indent}{self.disc_sym}", *args, **kwargs)
+                self._line(f"{ind}{self.indent}{self.dir_disc_sym}", *args, **kwargs)
                 break
             self._line(f"{ind}{self.indent}{self.file_sym} {f}", *args, **kwargs)
             full = os.path.join(root, f)
-
             if file_match_regex and re.search(file_match_regex, f):
                 self._track_match(*args, path=full, **kwargs)
-
-            if self.verbose > level:
-                if self._ignored_file(f, *args, **kwargs):
-                    listed += 1
-                    continue
+            should_load = self.verbose > level and not self._ignored_file(f, *args, **kwargs)
+            if should_load:
                 fc = self.load_file_content(*args, file_path=full, **kwargs)
                 self.loaded_files.append(full)
                 contents.append(
@@ -194,11 +140,12 @@ class Tree:
         if path and path not in self.matched_files:
             self.matched_files.append(path)
 
-    def _promote_workfile(self, *args, work_file_name: str, **kwargs) -> None:
-        base = work_file_name
+    def _promote_workfile(self, *args, work_file_name:str=None, **kwargs) -> None:
+        if not work_file_name:
+            return
         idx = next(
             (i for i, p in enumerate(self.matched_files)
-             if os.path.splitext(os.path.basename(p))[0] == base),
+             if os.path.splitext(os.path.basename(p))[0] == work_file_name),
             None,
         )
         if idx is None:
@@ -244,18 +191,25 @@ class Tree:
             for pat in ignores
         )
 
+    def _match_pat(self, *args, f: str, p: str, **kwargs) -> bool:
+        """Short matcher: exact, substring, or extension token like '.png'."""
+        f2, p2 = f.casefold(), p.casefold()
+        if p2.startswith(".") and "." in f2:
+            return f2.endswith(p2)
+        return p2 == f2 or p2 in f2
+
     def _ignored_file(self, fname: str, *args, **kwargs) -> bool:
         """
-        WHY: Hide technical files until verbosity reaches required level.
-        Rule: if self.verbose < level and any(pattern in name) -> ignore.
-        Case-insensitive for robustness.
+        Hide file contents until verbosity reaches the configured min level.
+        Rule: if verbose < level_for_pattern and pattern in name -> ignore.
         """
         rules: dict[int, set[str]] = getattr(sts, "ignore_files", {})
         f = fname.casefold()
-        for min_show_level, pats in rules.items():
-            if self.verbose < min_show_level and any(p.casefold() in f for p in pats):
-                return True
-        return False
+        return any(
+            self.verbose < level and any(p.casefold() in f for p in pats)
+            for level, pats in rules.items()
+        )
+
 
     def _is_abbrev_dir(self, root: str, *args, **kwargs) -> bool:
         """
@@ -307,85 +261,3 @@ class Tree:
                     line = line.replace(sym, f"{col}{sym}{Style.RESET_ALL}")
             out.append(line)
         return "\n".join(out).strip()
-
-    def uncolorize(self, tree: str, *args, **kwargs) -> str:
-        """
-        WHY: Strip basic Colorama sequences from a rendered tree.
-        """
-        cols = [
-            Fore.YELLOW, Fore.GREEN, Fore.RED, Fore.BLUE, Fore.CYAN,
-            Fore.WHITE, Style.RESET_ALL, Style.DIM, Style.RESET_ALL,
-        ]
-        out = []
-        for line in tree.split("\n"):
-            for c in cols:
-                line = line.replace(c, "")
-            out.append(line)
-        return "\n".join(out).strip()
-
-    def _normalize_tree(self, tree: str, *args, **kwargs) -> str:
-        """
-        WHY: Left-trim to minimal indent so parse_tree works on pasted trees.
-        """
-        lines = tree.split("\n")
-        if not lines:
-            return ""
-        pad = self.indent
-        levels = [len(l) - len(l.lstrip(pad)) for l in lines if l.strip()]
-        min_ind = min(levels) if levels else 0
-        norm = [l[min_ind:] if l.strip() else l for l in lines]
-        return "\n".join(norm).strip()
-
-    def _cleanup_line(self, line: str, *args, **kwargs) -> Tuple[str, bool]:
-        """
-        WHY: Remove style symbols; return (text, is_dir).
-        """
-        line = line.strip()
-        is_dir = line.startswith(self.dir_sym)
-        for s in (self.disc_sym, self.dir_sym, self.file_sym, self.fold_sym):
-            line = line.replace(s, "")
-        return line.strip(), is_dir
-
-    def parse_tree(self, tree: str, *args, **kwargs) -> List[Tuple[str, bool]]:
-        """
-        WHY: Convert textual tree into (path, is_dir) tuples for mk_dirs_hierarchy.
-        """
-        paths: List[Tuple[str, bool]] = []
-        temps: List[str] = []
-        norm = self._normalize_tree(tree, *args, **kwargs)
-        for line in norm.split("\n"):
-            if not line or line.startswith(self.disc_sym) or line.startswith("<"):
-                continue
-            level = line.count(self.indent)
-            txt, is_dir = self._cleanup_line(line, *args, **kwargs)
-            if not txt or txt == self.disc_sym:
-                continue
-            if len(temps) < level:
-                temps.append(txt)
-            else:
-                temps = temps[:level] + [txt]
-            paths.append((os.path.join(*temps), is_dir))
-        return paths
-
-    def mk_dirs_hierarchy(
-        self,
-        dirs: Iterable[Tuple[str, bool]],
-        tgt_path: str,
-        *args,
-        **kwargs,
-    ) -> Optional[str]:
-        """
-        WHY: Materialize (path, is_dir) tuples under tgt_path; return first dir.
-        """
-        start_dir = None
-        with _temp_chdir(tgt_path):
-            for path, is_dir in dirs:
-                if os.path.exists(path):
-                    continue
-                if is_dir:
-                    os.makedirs(path)
-                    start_dir = start_dir or os.path.join(tgt_path, path)
-                else:
-                    with open(path, "w", encoding="utf-8") as f:
-                        f.write(f"#{os.path.basename(path)}\n\n")
-        return start_dir

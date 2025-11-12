@@ -2,18 +2,9 @@ import ast
 import os
 import graphviz
 import argparse
+import protopy.settings as sts
+from colorama import Fore, Style
 
-ignore_dirs = {
-                ".git",
-                "build",
-                "gp",
-                "dist",
-                "models",
-                "*.egg-info",
-                "__pycache__",
-                ".pytest_cache",    
-                ".tox",
-}
 
 class PackageInfo:
     def __init__(self, main_file: str, *args, **kwargs):
@@ -33,7 +24,7 @@ class PackageInfo:
         Determine the root directory of a Python project by locating __main__.py.
         """
         for root, dirs, files in os.walk(os.getcwd()):
-            dirs[:] = [d for d in dirs if d not in ignore_dirs]
+            dirs[:] = [d for d in dirs if d not in sts.ignore_dirs]
             if '__main__.py' in files:
                 return os.path.split(root)
         return None
@@ -43,11 +34,9 @@ class PackageInfo:
         if filename in self.visited_files:
             return
         self.visited_files.add(filename)
-
         # Initialize incoming edges count if not already
         if filename not in self.incoming_edges:
             self.incoming_edges[filename] = 0
-
         imports = self.parse_imports(filepath)
         for imp, origin in imports:
             next_file = self.resolve_module_path_to_file(imp)
@@ -57,7 +46,6 @@ class PackageInfo:
                 if next_filename not in self.incoming_edges:
                     self.incoming_edges[next_filename] = 0
                 self.incoming_edges[next_filename] += 1
-
                 self.graph.edge(filename, next_filename, label=imp)
                 self.build_graph(next_file)
 

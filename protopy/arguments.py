@@ -119,6 +119,18 @@ def mk_args():
     )
 
     parser.add_argument(
+        "-d",
+        "--detail",
+        required=False,
+        nargs="?",
+        const=1,
+        type=int,
+        default=0,
+        choices=range(0, 5),
+        help="verbosity flag for file system view. 0:none, 1:short, 2:medium, 3:long, 4:all",
+    )
+
+    parser.add_argument(
         "-v",
         "--verbose",
         required=False,

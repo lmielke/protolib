@@ -1,4 +1,10 @@
 # info.py
+"""
+Contains functions to gather and display various information about the
+current Python environment, project structure, and package details.
+NOTE: do not remove or change the lines marked with # clone_remove_line (process relevant)
+"""
+
 import subprocess
 import fnmatch, os, sys
 import pyperclip, requests
@@ -8,9 +14,12 @@ from colorama import Fore, Style
 import protopy.settings as sts
 from protopy.helpers.tree import Tree
 from protopy.helpers.import_info import main as import_info
-from protopy.helpers.package_info import pipenv_is_active
+# from protopy.helpers.package_info import pipenv_is_active
 
 from protopy.creator.clone import clone_info # clone_remove_line
+import protopy.helpers.printing as printing
+from protopy.helpers.printing import logprint, Color, MODULE_COLORS
+MODULE_COLORS["info"] = Color.MAGENTA
 
 all_infos = {"python", "package"}
 
@@ -34,7 +43,7 @@ def get_infos(*args, verbose, infos: set = set(), **kwargs):
     collect_infos(
         f"{Fore.YELLOW}\nfor more infos: {Style.RESET_ALL}proto info "
         f"{Fore.YELLOW}-i{Style.RESET_ALL} {all_infos} "
-        f"{Fore.YELLOW}-v{Style.RESET_ALL} 1-3"
+        f"{Fore.YELLOW}-v{Style.RESET_ALL} [1, 2, 3, 5, 7, 99]"
     )
     cloning_info(*args, verbose=verbose, **kwargs) # clone_remove_line
     user_info(*args, **kwargs)
@@ -91,19 +100,32 @@ def package_info(*args, verbose: int = 0, **kwargs):
     except Exception as e:
         print(f"{Fore.RED}Error:{Fore.RESET} {e}")
     collect_infos(
-        f"Project import structure:\n" f"{import_info(main_file_name='protopy.py', verbose=0, )}"
+        f"Project import structure:\n" f"{import_info(main_file_name='protopy.py', verbose=0)}"
     )
     with open(os.path.join(sts.project_dir, "Readme.md"), "r") as f:
         collect_infos(f"\n<readme>\n{f.read()}\n</readme>\n")
         # package help
 
 
-def main(*args, clip=None, **kwargs) -> str:
-    get_infos(*args, **kwargs)
-    out = "\n".join(collect_infos(f"info.main({kwargs})"))
+# project environment info
+def pipenv_is_active(exec_path, *args, **kwargs):
+    """
+    check if the environment is active 
+    pipenv is active when the package name appears as the basename of the exec_path
+    """
+    # print(f"{os.path.basename(exec_path.split('Scripts')[0].strip(os.sep)) = }")
+    is_active = os.path.basename(
+        exec_path.split('Scripts')[0].strip(os.sep)).startswith(sts.project_name)
+    return is_active
+
+def main(*args, clip=None, verbose:int=0, **kwargs) -> str:
+    get_infos(*args, verbose=verbose, **kwargs)
+    out = "\n".join(collect_infos(f""))
     if clip:
         pyperclip.copy(out)
         print(f"{Fore.GREEN}Copied to clipboard!{Style.RESET_ALL}")
+    if verbose >= 2:
+        printing.pretty_dict('main.kwargs', kwargs)
     return out
 
 if __name__ == "__main__":

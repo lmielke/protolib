@@ -306,9 +306,12 @@ def copy_resources(tgt_dir: str, new_pr_name: str, pg_name:str='protopy') -> Non
     print(f"Found:{Fore.YELLOW}{os.listdir(pg_dir)}{Fore.RESET}")
 
     # Copy arguments.py and settings.py from resources to the package directory
-    for file_name in ["arguments.py", "settings.py", "Reamde.md"]:
+    for file_name in ["arguments.py", "settings.py", "Readme.md"]:
         src_file_path = os.path.join(resources_dir, file_name)
-        tgt_file_path = os.path.join(tgt_dir, new_pr_name, pg_name, file_name)
+        if file_name == 'Readme.md':
+            tgt_file_path = os.path.join(tgt_dir, new_pr_name, file_name)
+        else:
+            tgt_file_path = os.path.join(tgt_dir, new_pr_name, pg_name, file_name)
 
         if os.path.exists(src_file_path):
             shutil.copy2(src_file_path, tgt_file_path)
