@@ -1,5 +1,7 @@
 # clone.py
 import protopy.settings as sts
+from protopy.helpers.printing import logprint, Color, MODULE_COLORS
+MODULE_COLORS["clone"] = Color.MAGENTA
 from colorama import Fore, Style
 import subprocess
 import os, re, shutil, stat, sys, time
@@ -624,7 +626,8 @@ def main(*args, api:str=None, **kwargs) -> str:
     # run_checks will use defaults if 'install' or 'py_version' are not in kwargs,
     # or use values from kwargs if provided.
     run_checks(*args, **kwargs)
-    
+    _k = '\n' + '\n'.join([f"{k}: {v}" for k, v in kwargs.items()])
+    logprint(f"cloning '{kwargs.get('new_pr_name')}':{_k}", level='warning', console_log=False)
     # clone_and_install will:
     # 1. Extract specific parameters for `initalize` from kwargs (e.g. 'tgt_dir', 'new_pr_name').
     #    If not found, `initalize` will prompt the user.
