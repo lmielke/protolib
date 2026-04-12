@@ -1,67 +1,98 @@
-# User Readme for Protolib python template package
+<!--
+source_path: /home/lars/repos/protolib/Readme.md
+edit: true
+purpose: "User-facing documentation. Explains installation, usage, and commands."
+update_rules: "Update when user-facing behaviour, commands, or parameters change."
+format: "prose + code blocks"
+-->
 
-Creates a empty **python package** using **pipenv** including all the relevant boilerpalte for a pyhon project with a single command.
+# Protolib — Python Package Template
 
-Protolib itself serves as a **template** for your new package, so right after **proto clone**, you can start using the new package.
+Creates a ready-to-use Python package from a template with a single command.
+After `proto clone`, you can start coding immediately in the new package.
 
-When running **proto clone** protolib is copied to your -t tgt_dir and re-structuring/re-naming is automatically done. 
-NOTE: All code relevant for cloning and renaming the package is removed inside the target package. So the resulting target package cannot be used for cloning. Keep protolib if you want to create additional packages.
+## Install
 
-# Basic steps and commands
-1. Clone protolib into your target directory
-2. After activating protolib like 'pipenv shell' you can use the following command:
-```shell
-    cd .../protolib
-    pipenv shell
-    # minimal proto clone
-    proto clone -pr 'my_superlib' -n 'my_superpackage' -a 'supi_alias' -t '/temp'
-    # carefully choose your future project naming/install parameters
-    # check if protolib environment is already active, and activeate if needed
-    # the folowing command will create a new python package in /temp using a copy of protolib
-    proto clone -pr 'my_superlib' -n 'my_superpackage' -a 'supi_alias' -t '/temp' -p 3.13 --install
-    # note that by omitting the --install flag, no python environment will be created
-    # clone might ask you additional questions, i.e. missing parameters
-    # You can now exit proto and start coding your package
+```sh
+git clone git@gitlab.com:larsmielke2/protopy.git ./protolib
+cd protolib
+uv python install 3.13
+uv sync
 ```
-This will clone protolib into your new python package and install the environment using pipenv, so you can start coding right away.
 
-When done, you can start coding your package in the newly created packag folder ('my_superpackage').
-1. cd to your new package folder (i.e. '/temp/my_superlib')
-2. Activate the environment using `pipenv shell`
-3. To test the install sucess, run the following command:
-```shell
-    # retrieve some basic info about the package structure and its capabilities
-    supi_alias info -i ['project', 'python'] or -v 1-3
+Add an activate shortcut (optional):
+```sh
+echo '\nalias activate="source .venv/bin/activate"' >> ~/.zshrc && source ~/.zshrc
 ```
-Fields: 
-- -i --infos Package infos [python, package] to be retreived, default: None
-- -pr (project folder name),
-- -n (package name), IMPORTANT NOTE: package name must be different from project folder name
-- -t (target dir, where your project folder is created)
-- -a (package alias) 
-- -p python version [3.10, 3.11] to be used (will be set in your Pipfile)
-- --install (bool) Triggers pipenv to install the environment using py_version.
 
-<img src="https://drive.google.com/uc?id=1C8LBRduuHTgN8tWDqna_eH5lvqhTUQR4" alt="me_happy" class="plain" height="150px" width="220px">
+## Clone a New Package
 
-## get and install
-```shell
-    git clone git@gitlab.com:larsmielke2/protopy.git ./protolib
+```sh
+activate
+proto clone -pr 'my_superlib' -n 'my_superpackage' -a 'supi_alias' -t '/tmp' --port 9005 -p 3.13 --install
 ```
-## Structure
-### protopy
-- coding is in protolib/protopy folder, add your .py modules there
-- protopy.apis contains the entry points to your package like info.py (usage: supi_alias entry_point)
-- you can create as many entry points as needed 
-- any entry_point.py module requires a main(*args, **kwargs) function as entry point
-- __main__.py calls protolib/protopy/apis/entry_point.py[provides as shell call args]
 
+| Flag | Required | Description |
+|------|----------|-------------|
+| `-pr` | yes | Project folder name |
+| `-n` | yes | Package name (must differ from project name) |
+| `-a` | yes | Package alias (CLI command name) |
+| `-t` | yes | Target directory |
+| `--port` | yes | HTTP port for server.py |
+| `-p` | no | Python version for environment |
+| `--install` | no | Run `uv sync` after cloning |
+| `-y` | no | Skip confirmation prompts |
 
-## USAGE
-### 1. Clone protopy into your target directory
+After cloning, read the target project's `Readme.md` — it has been replaced with new instructions for your package.
 
-### 2. Navigate to your new package and start coding
-```shell 
-    cd $tgt_dir
-    pipenv shell
-    supi_alias api_name [any args]
+## Daily Use
+
+```sh
+activate
+proto info                                        # show package info
+proto info -i package python -v 1                 # detailed info
+proto server                                      # start HTTP server (default port from settings)
+proto server --port 9005                          # start on specific port
+curl http://localhost:9005/info/?infos=package     # test the server
+```
+
+## Registry APIs
+
+Every protolib-based package includes built-in service discovery. These work both as CLI commands and HTTP endpoints:
+
+```sh
+proto register                               # register with registry (one-shot)
+proto expose_api                             # show this service's API signatures
+proto discover --service_id ollama           # look up a service by ID
+
+# HTTP equivalents (server must be running)
+curl http://localhost:9006/register/
+curl http://localhost:9006/expose_api/
+curl http://localhost:9006/discover/?service_id=ollama
+```
+
+Registry integration is optional — if the registry is down, the package operates normally. See `BLUEPRINT_REGISTRY.md` for the full design.
+
+---
+
+## System Service (optional)
+
+A `protolib.service` file is included in the project root.
+
+User service (starts on login):
+```sh
+systemctl --user enable --now ~/repos/protolib/protolib.service
+```
+
+System service (starts on boot):
+```sh
+sudo cp ~/repos/protolib/protolib.service /etc/systemd/system/
+sudo systemctl enable --now protolib
+```
+
+Managing the service:
+```sh
+systemctl --user status protolib
+systemctl --user restart protolib
+journalctl --user -u protolib -f
+```

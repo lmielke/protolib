@@ -1,0 +1,60 @@
+# script_path: ~/repos/protolib/CHANGELOG.yaml
+purpose: Chronological log of all system changes and fixes. Append-only.
+edit: update_docs.sh
+view:
+  col_widths: {scope: 18, description: 80}
+schema:
+  collection: entries
+  fields:
+    datetime: {type: string, format: "YYYY-MM-DDTHH:MM:SS", allowed: ["^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}$"]}
+    scope: {type: string, hint: "subsystem or component label"}
+    description: {type: string, hint: "what changed"}
+entries:
+  - datetime: 2026-03-30T16:44:32
+    description: v0.0.1 initial push — python 3.11-3.13 support
+    scope: core
+  - datetime: 2026-03-30T16:44:39
+    description: 'v0.1.1 fix: lazy-import pyttsx3 in _speak_message with ImportError guard; remove unused requests import from apis/info.py; guard pyperclip with try/except'
+    scope: helpers/collections
+  - datetime: 2026-03-30T16:44:40
+    description: 'v0.1.1 fix: drop return on runable(...).main(...) call — prevents double output and exit-code 1 on every successful command'
+    scope: __main__
+  - datetime: 2026-03-30T16:44:40
+    description: 'v0.1.1 fix: stub check_env_vars (remove dotenv/pg_alias coupling) and get_package_data (replace DirContext traversal with settings-based path resolution)'
+    scope: contracts
+  - datetime: 2026-03-30T16:44:45
+    description: 'v0.1.2 fix: NameError new_project_path — clone_and_install now returns new_project_path; main() restored to clean calling wrapper'
+    scope: creator/clone
+  - datetime: 2026-03-30T16:44:50
+    description: 'v0.1.3 fix: added -y to Optionals section in clone_info output and Readme.md — flag was functional but missing from docs'
+    scope: cli/clone_info
+  - datetime: 2026-03-30T16:44:58
+    description: 'v0.2.0 feature: verbosity control — -v 0 shows only start params + success, -v 3+ shows full file-level output; errors always visible'
+    scope: creator/clone
+  - datetime: 2026-03-30T16:44:58
+    description: 'v0.2.0 feature: --port override — proto server --port 9005 starts on specified port instead of settings default'
+    scope: server
+  - datetime: 2026-03-30T16:44:59
+    description: 'v0.2.0 fix: return output string for HTTP responses — previously returned nothing via server API'
+    scope: apis/select_files
+  - datetime: 2026-03-30T16:44:59
+    description: v0.2.0 merged commands.md into Readme.md; added BLUEPRINT_REGISTRY.md and BLUEPRINT_CLAUDE.md
+    scope: docs
+  - datetime: 2026-03-30T16:45:06
+    description: 'v0.3.0 feature: built-in registry connector — RegistryClient, RegistryHost, ApiIntrospector in protopy.py; three new APIs: register, announce, expose_api'
+    scope: registry
+  - datetime: 2026-03-30T16:45:07
+    description: 'v0.3.0 feature: server.py starts heartbeat loop on startup; do_POST for /announce endpoint'
+    scope: server
+  - datetime: 2026-03-30T16:45:07
+    description: 'v0.3.0 feature: registry settings (registry_port, registry_host_enabled, registry_state_file, registry_heartbeat_interval); --registry_url and --ttl CLI args'
+    scope: settings/cli
+  - datetime: 2026-03-30T16:45:14
+    description: 'v0.3.1 refactor: registry classes moved from protopy.py to dedicated registry.py; Docker-aware registration with _resolve_host(), discover_url(), discover(fresh=True), get_service_info() host field'
+    scope: registry
+  - datetime: 2026-03-30T16:45:15
+    description: 'v0.3.1 fix: relative imports in expose_api, register, announce, server — clone-proof, no text replacement needed; ttl=None from argparse coalesced to default 30'
+    scope: apis
+  - datetime: 2026-03-30T16:45:20
+    description: 'v0.3.2 feature: added CLAUDE.md, .claude/commands/info.md (/info slash command), resources/CLAUDE.md + resources/.claude/ skeleton for clone propagation; removed BLUEPRINT_CLAUDE.md (implemented)'
+    scope: claude-integration

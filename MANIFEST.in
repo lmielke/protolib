@@ -1,5 +1,4 @@
 include README.md
 include CHANGELOG.md
 include LICENSE
-include protopy/resources/_protopy.yml
-include protopy/logs/.gitkeep
+recursive-include src/protolib/resources *

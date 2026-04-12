@@ -1,0 +1,65 @@
+purpose: Observation log for automation candidates. Not a task list.
+edit: update_docs.sh
+update: 'Use ~/utils/update_docs.sh to manage entries. add: docs k a {"doc":"k","op":"add","title":"...","priority":"medium","status":"open","category":"tooling","impact":"medium","effort":"low","component":"...","owner":"lars","description":"...","action":"..."}  modify: docs k c {"doc":"k","op":"modify","datetime":"YYYY-MM-DDTHH:MM:SS","field":"value"}  remove: docs k r {"doc":"k","op":"remove","datetime":"YYYY-MM-DDTHH:MM:SS"}'
+schema:
+  fields:
+    datetime:
+      type: string
+      format: YYYY-MM-DDTHH:MM:SS
+      allowed:
+        - ^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}$
+    title:
+      type: string
+      hint: short human-readable label
+    priority:
+      type: string
+      allowed:
+        - low
+        - medium
+        - high
+    status:
+      type: string
+      allowed:
+        - open
+        - in-progress
+        - blocked
+        - closed
+    category:
+      type: string
+      allowed:
+        - ux
+        - performance
+        - architecture
+        - workflow
+        - tooling
+    impact:
+      type: string
+      allowed:
+        - low
+        - medium
+        - high
+    effort:
+      type: string
+      allowed:
+        - low
+        - medium
+        - high
+    component:
+      type: string
+      hint: subsystem or scope label
+    owner:
+      type: string
+      hint: assignee username
+    description:
+      type: string
+      hint: 'observed manual step or inefficiency; append  | ref: ~/path  if a blueprint exists'
+    action:
+      type: string
+      hint: suggested automation or improvement
+  collection: items
+view:
+  col_widths:
+    title: 30
+    description: 45
+    action: 35
+items: []

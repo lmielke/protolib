@@ -1,11 +1,59 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "protolib"
+version = "0.1.0"
+description = "A professional project-creation template logic."
+readme = "Readme.md"
+requires-python = ">=3.13"
+authors = [{name = "lars"}]
+
+dependencies = [
+    "ansi2html>=1.9.2",
+    "colorama",
+    "graphviz",
+    "jinja2",
+    "psutil",
+    "pyperclip",
+    "python-dotenv",
+    "pyttsx3",
+    "pyyaml",
+    "requests",
+    "rich",
+    "setuptools",
+    "tabulate",
+]
+
+[dependency-groups]
+dev = [
+    "black",
+    "openai",
+    "pre-commit",
+    "pytest",
+    "toml",
+    "tox",
+]
+
+[project.scripts]
+proto = "protolib.__main__:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools]
+include-package-data = true
+
 [tool.black]
 line-length = 99
 
 [tool.pytest.ini_options]
+testpaths = ["src/protolib/test"]
+python_files = "test_*.py"
 log_cli = true
 log_cli_level = "DEBUG"
 log_cli_format = "%(message)s"
-
 log_file = "pytest.log"
 log_file_level = "DEBUG"
 log_file_format = "%(asctime)s [%(levelname)8s] %(message)s (%(filename)s:%(lineno)s)"

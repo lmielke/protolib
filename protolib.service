@@ -1,0 +1,15 @@
+[Unit]
+Description=protolib server
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/home/lars/repos/protolib
+ExecStart=/home/lars/repos/protolib/.venv/bin/python -m protolib server -v 1
+Restart=on-failure
+RestartSec=5
+Environment=pg_alias=proto
+Environment=port=9001
+
+[Install]
+WantedBy=default.target
