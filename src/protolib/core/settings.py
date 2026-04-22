@@ -1,0 +1,54 @@
+"""
+script_path: src/protolib/core/settings.py
+purpose: Self-contained settings for the core framework layer.
+description: |-
+  All structural values
+  derived from __file__ using Django-style path resolution — no hardcoded package
+  names. Works correctly in protolib and all clones without modification.
+governance_exceptions:
+  - c8: "no class definition — verify OOP intent"
+  - c41: "duplicate basename at app/settings.py, core/settings.py"
+"""
+import os
+
+core_dir = os.path.dirname(__file__)              # .../src/<pkg>/core/
+package_dir = os.path.dirname(core_dir)           # .../src/<pkg>/
+src_dir = os.path.dirname(package_dir)              # .../src/
+project_dir = os.path.dirname(src_dir)              # .../repos/<pkg>/
+
+package_name = os.path.basename(package_dir)        # "protolib" — django style
+project_name = os.path.basename(project_dir)
+
+apis_dir = os.path.join(package_dir, "app", "apis")
+apis_json_dir = os.path.join(apis_dir, "json_schemas")
+
+# (dir, import-prefix) pairs — consumed by registry and app dispatcher.
+api_packages = [
+    (os.path.join(package_dir, "core", "apis"), f"{package_name}.core.apis"),
+    (os.path.join(package_dir, "app", "apis"), f"{package_name}.app.apis"),
+]
+test_dir = os.path.join(package_dir, "test")
+test_data_dir = os.path.join(test_dir, "data")
+
+ignore_dirs = {
+    ".git", ".venv", ".uv", "build", "gp", "dist", "models",
+    "*.egg-info", "__pycache__", ".pytest_cache", ".tox", "*helpers",
+}
+abrev_dirs = {"log", "logs", "testopia_logs", "chat_logs"}
+
+table_max_chars = 200
+resources_dir = os.path.expanduser(f"~{os.sep}.{package_name}")
+error_path = os.path.join(resources_dir, "error.log")
+
+eext = ".yml"
+fext = ".json"
+
+port = 9001
+user_settings_name = "settings.yml"
+user_settings_path = os.path.join(resources_dir, user_settings_name)
+
+registry_port = int(os.environ.get("REGISTRY_PORT", 9000))
+registry_url = f"http://127.0.0.1:{registry_port}"
+registry_state_file = os.path.join(resources_dir, "registry_state.json")
+registry_host_enabled = False
+registry_heartbeat_interval = 60

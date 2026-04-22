@@ -6,10 +6,11 @@ update_rules: "Update when user-facing behaviour, commands, or parameters change
 format: "prose + code blocks"
 -->
 
-# Protolib — Python Package Template
+# Protolib — Self-Similar Python Package Template
 
-Creates a ready-to-use Python package from a template with a single command.
-After `proto clone`, you can start coding immediately in the new package.
+Protolib is both a working package and the template for all derived packages.
+Every clone inherits the full `core/` + `helpers/` framework and can produce
+more clones itself. Framework updates propagate via `proto-admin sync`.
 
 ## Install
 
@@ -20,79 +21,69 @@ uv python install 3.13
 uv sync
 ```
 
-Add an activate shortcut (optional):
-```sh
-echo '\nalias activate="source .venv/bin/activate"' >> ~/.zshrc && source ~/.zshrc
+## Layout
+
 ```
+src/protolib/
+├── app/            # application layer (clone owners edit here)
+├── core/           # framework: registry, APIs, admin, creator
+├── helpers/        # pure utilities (no app/core dependencies)
+├── test/           # integration tests (testhelper.py is a utility file, not a test; governance rules do not apply to it)
+
+```
+
+## Two Entry Points
+
+| Command | Dispatches to | Purpose |
+|---|---|---|
+| `proto` | `app.protopy:main` | application APIs (info, server, register, ...) |
+| `proto-admin` | `core.admin:main` | framework ops (clone, sync) |
 
 ## Clone a New Package
 
 ```sh
-activate
-proto clone -pr 'my_superlib' -n 'my_superpackage' -a 'supi_alias' -t '/tmp' --port 9005 -p 3.13 --install
+proto-admin clone -pr my_superlib -n my_superpackage -a supi -t /tmp --port 9005 -p 3.13 --install
 ```
 
 | Flag | Required | Description |
 |------|----------|-------------|
 | `-pr` | yes | Project folder name |
-| `-n` | yes | Package name (must differ from project name) |
-| `-a` | yes | Package alias (CLI command name) |
+| `-n` | yes | Package name (inside `src/`) |
+| `-a` | yes | Package alias (CLI command for the clone) |
 | `-t` | yes | Target directory |
-| `--port` | yes | HTTP port for server.py |
-| `-p` | no | Python version for environment |
+| `--port` | yes | HTTP port for the server |
+| `-p` | no | Python version for the clone's venv |
 | `--install` | no | Run `uv sync` after cloning |
 | `-y` | no | Skip confirmation prompts |
 
-After cloning, read the target project's `Readme.md` — it has been replaced with new instructions for your package.
+Aliases should be ≥ 3 characters to avoid collateral text substitutions.
 
 ## Daily Use
 
 ```sh
-activate
-proto info                                        # show package info
-proto info -i package python -v 1                 # detailed info
-proto server                                      # start HTTP server (default port from settings)
-proto server --port 9005                          # start on specific port
-curl http://localhost:9005/info/?infos=package     # test the server
+proto info                                         # show package info
+proto server                                       # start HTTP server
+curl http://localhost:9001/info/?infos=package     # test the server
+proto register                                     # register with registry
+proto discover --service_id ollama                 # look up a service
 ```
 
-## Registry APIs
+## Framework Sync
 
-Every protolib-based package includes built-in service discovery. These work both as CLI commands and HTTP endpoints:
+Clones stay in sync with protolib's framework layer:
 
 ```sh
-proto register                               # register with registry (one-shot)
-proto expose_api                             # show this service's API signatures
-proto discover --service_id ollama           # look up a service by ID
 
-# HTTP equivalents (server must be running)
-curl http://localhost:9006/register/
-curl http://localhost:9006/expose_api/
-curl http://localhost:9006/discover/?service_id=ollama
+
+proto-admin sync                                   # push core/+helpers/ to all registered clones
+
 ```
 
-Registry integration is optional — if the registry is down, the package operates normally. See `BLUEPRINT_REGISTRY.md` for the full design.
-
----
+Sync touches only `core/` and `helpers/`. `app/` is never modified.
 
 ## System Service (optional)
 
-A `protolib.service` file is included in the project root.
-
-User service (starts on login):
 ```sh
 systemctl --user enable --now ~/repos/protolib/protolib.service
-```
-
-System service (starts on boot):
-```sh
-sudo cp ~/repos/protolib/protolib.service /etc/systemd/system/
-sudo systemctl enable --now protolib
-```
-
-Managing the service:
-```sh
-systemctl --user status protolib
-systemctl --user restart protolib
 journalctl --user -u protolib -f
 ```

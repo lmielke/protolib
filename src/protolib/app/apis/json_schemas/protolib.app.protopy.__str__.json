@@ -1,0 +1,29 @@
+{
+    "base": {
+        "name": "DefaultClass.__str__",
+        "description": null,
+        "import_path": "protolib.app.protopy",
+        "module_path": "/home/lars/repos/protolib/src/protolib/app/protopy.py",
+        "parameters": {
+            "type": "object",
+            "properties": {}
+        },
+        "body": "def __str__(self, *args, **kwargs) -> str:\n        return f\"DefaultClass: {self.pg_name = }\"",
+        "returns": "string",
+        "example": "@FunctionToJson(schemas={\"openai\"}, write=True)\n    def test___str__(self):\n        # Update the pg_name passed in if you want, \n        # but the class itself is now likely defaulting to 'protolib'\n        pc = DefaultClass(pr_name=\"protolib\", pg_name=\"protolib\", py_version=\"3.7\")\n        \n        # Change 'protopy' to 'protolib'\n        expected = \"DefaultClass: self.pg_name = 'protolib'\" \n        self.assertEqual(str(pc), expected)"
+    },
+    "execution": {
+        "import_path": "protolib.app.protopy",
+        "module_path": "/home/lars/repos/protolib/src/protolib/app/protopy.py"
+    },
+    "openai": {
+        "name": "DefaultClass.__str__",
+        "description": "def __str__(self, *args, **kwargs) -> str:\n        return f\"DefaultClass: {self.pg_name = }\"",
+        "parameters": {
+            "type": "object",
+            "properties": {},
+            "required": []
+        },
+        "returns": "string"
+    }
+}

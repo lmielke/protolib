@@ -1,113 +1,91 @@
-# collections.py
-import json, os, re, shutil, subprocess, sys, textwrap, time, yaml
-from contextlib import contextmanager
+"""
+script_path: src/protolib/helpers/collections.py
+purpose: Path resolution, dict traversal, text grouping, and directory walk utilities.
+description: |-
+  Stateless utility functions shared across the protolib framework.
+  Provides path alias expansion, recursive dict search, text wrapping
+  for tabular display, directory ignore-pattern collection, and file
+  lookup within the project tree.
+update_rules: Do not modify in clones.
+governance_exceptions:
+  - c8: "no class definition — verify OOP intent"
+"""
+import os, re, textwrap, yaml
 from pathlib import Path
-from tabulate import tabulate as tb
-from datetime import datetime as dt
+from contextlib import contextmanager
 
-import protolib.settings as sts
+import protolib.app.settings as sts
 
-def _speak_message(message: str, *args, **kwargs):
-    """Uses pyttsx3 to speak a given message (optional dependency)."""
-    try:
-        import pyttsx3
-        engine = pyttsx3.init()
-        engine.say(message)
-        engine.runAndWait()
-    except ImportError:
-        pass
-    except Exception as e:
-        import logging
-        logging.error(f"Text-to-speech failed: {e}")
-
-def unalias_path(work_path: str) -> str:
+def _resolve_dots(wp:str, *args, **kwargs):
     """
-    repplaces path aliasse such as . ~ with path text
+    purpose: Resolve leading .
+    description: or .. relative to cwd.
     """
-    if not any([e in work_path for e in [".", "~", "%"]]):
-        return work_path
-    work_path = work_path.replace(r"%USERPROFILE%", "~")
-    work_path = work_path.replace("~", os.path.expanduser("~"))
-    if work_path.startswith(".."):
-        work_path = os.path.join(os.path.dirname(os.getcwd()), work_path[3:])
-    elif work_path.startswith("."):
-        work_path = os.path.join(os.getcwd(), work_path[2:])
-    work_path = os.path.normpath(os.path.abspath(work_path))
-    return work_path
+    if wp.startswith(".."):
+        return os.path.join(os.path.dirname(os.getcwd()), wp[3:])
+    if wp.startswith("."):
+        return os.path.join(os.getcwd(), wp[2:])
+    return wp
 
-def prep_path(work_path: str, file_prefix=None) -> str:
-    work_path = unalias_path(work_path)
-    if os.path.exists(work_path):
-        return work_path
-    # check for extensions
-    extensions = ["", sts.eext, sts.fext]
-    name, extension = os.path.splitext(os.path.basename(work_path))
-    for ext in extensions:
-        work_path = unalias_path(f"{name}{ext}")
-        if os.path.isfile(work_path):
-            return work_path
-    return f"{name}{extension}"
+def unalias_path(wp:str, *args, **kwargs):
+    """
+    purpose: Replace path aliases (.
+    description: ~ %USERPROFILE%) with absolute paths.
+    """
+    if not any(c in wp for c in ".~%"):
+        return wp
+    wp = wp.replace(r"%USERPROFILE%", "~").replace("~", os.path.expanduser("~"))
+    wp = _resolve_dots(wp, *args, **kwargs)
+    return os.path.normpath(os.path.abspath(wp))
 
-def find_dict_entry(d: dict, matcher: str) -> dict | None:
+def prep_path(wp:str, *args, **kwargs):
+    """
+    purpose: Resolve path aliases and try common extensions if file not found.
+    """
+    wp = unalias_path(wp, *args, **kwargs)
+    if os.path.exists(wp): return wp
+    name, ext = os.path.splitext(os.path.basename(wp))
+    for e in ["", sts.eext, sts.fext]:
+        c = unalias_path(f"{name}{e}", *args, **kwargs)
+        if os.path.isfile(c): return c
+    return f"{name}{ext}"
+
+def find_dict_entry(d, matcher, *args, **kwargs):
+    """
+    purpose: Recursively search nested dict for a key matching matcher.
+    """
     for k, v in d.items():
-        if k == matcher:
-            return {k: v}
+        if k == matcher: return {k: v}
         if isinstance(v, dict):
-            r = find_dict_entry(v, matcher)
-            if r:
-                return r
+            r = find_dict_entry(v, matcher, *args, **kwargs)
+            if r: return r
     return None
 
 def group_text(text, charLen, *args, **kwargs):
-    # performs a conditional group by charLen depending on type(text, list)
+    """
+    purpose: Wrap text or list of strings to charLen width.
+    """
     if not text:
         return "None"
-    elif type(text) is str:
-        text = handle_existing_linebreaks(text, *args, **kwargs)
-        # print(f"0: {text = }")
+    if isinstance(text, str):
         text = '\n'.join(textwrap.wrap(text, width=charLen))
-        # print(f"1: {text = }")
-        text = restore_existing_linebreaks(text, *args, **kwargs)
-        # print(f"2: {text = }")
-        # text = text.replace(' <lb> ', '\n').replace('<lb>', '\n')
-        # text = text.replace('<tab>', '\t')
-    elif type(text) is list:
-        text = "\n".join(textwrap.wrap("\n".join([t for t in text]), width=charLen))
-    else:
-        print(type(text), text)
+    elif isinstance(text, list):
+        text = "\n".join(textwrap.wrap("\n".join(text), width=charLen))
     return '\n' + text
 
 def collect_ignored_dirs(source, ignore_dirs, *args, **kwargs):
     """
-    Uses os.walk and regular expressions to collect directories to be ignored.
-
-    Args:
-        source (str): The root directory to start searching from.
-        ignore_dirs (list of str): Regular expressions for directory paths to ignore.
-
-    Returns:
-        set: A set of directories to be ignored.
+    purpose: Walk source tree collecting dirs that match any regex in ignore_dirs.
     """
-    ignored = set()
     regexs = [re.compile(d) for d in ignore_dirs]
-
-    for root, dirs, _ in os.walk(source, topdown=True):
-        for dir in dirs:
-            dir_path = os.path.join(root, dir).replace(os.sep, '/')
-            if any(regex.search(dir_path) for regex in regexs):
-                ignored.add(os.path.normpath(dir_path))
-    return ignored
+    paths = (os.path.join(r, d).replace(os.sep, '/')
+             for r, dirs, _ in os.walk(source, topdown=True) for d in dirs)
+    return {os.path.normpath(p) for p in paths if any(r.search(p) for r in regexs)}
 
 @contextmanager
-def temp_chdir(target_dir: str) -> None:
+def temp_chdir(target_dir, *args, **kwargs):
     """
-    Context manager for temporarily changing the current working directory.
-
-    Parameters:
-    target_dir (str): The target directory to change to.
-
-    Yields:
-    None
+    purpose: 'Context manager: temporarily change cwd, restore on exit.'
     """
     original_dir = os.getcwd()
     try:
@@ -116,36 +94,44 @@ def temp_chdir(target_dir: str) -> None:
     finally:
         os.chdir(original_dir)
 
-def strip_ansi_codes(text: str) -> str:
+def _is_ignored_dir(name, *args, **kwargs):
     """
-    Strip ANSI escape sequences from a text string.
-    Args:
-        text (str): Text containing ANSI escape codes.
-    Returns:
-        str: Text with ANSI codes removed.
+    purpose: Check if directory name matches any pattern in sts.ignore_dirs.
     """
-    ansi_escape = re.compile(r'\x1b\[([0-9]+)(;[0-9]+)*m')
-    return ansi_escape.sub('', text)
+    name = name.strip()
+    return any(name == i or name.endswith(i.strip('*')) for i in sts.ignore_dirs)
 
-def _find_file_path(raw_path=None, *args, project_dir=None, max_depth=5, verbose:int=0, **kwargs):
+def _walk_for_file(file_name, pr_dir, max_depth, *args, **kwargs):
+    root_depth = pr_dir.count(os.sep)
+    for root, dirs, files in os.walk(pr_dir, topdown=True):
+        if _should_skip_dir(root=root, dirs=dirs, root_depth=root_depth, max_depth=max_depth):
+            continue
+        if file_name in files: return os.path.join(root, file_name)
+        dirs[:] = [d for d in dirs if not _is_ignored_dir(d)]
+    return None
+
+def _should_skip_dir(*args, root, dirs, root_depth, max_depth, **kwargs):
+    depth_exceeded = root.count(os.sep) - root_depth >= max_depth
+    if _is_ignored_dir(os.path.basename(root)) or depth_exceeded:
+        dirs.clear()
+        return True
+    return False
+
+def _find_file_path(raw_path=None, *args, project_dir=None, max_depth=5, **kwargs):
+    """
+    purpose: Locate a file by name within the project tree.
+    """
     if not raw_path:
         return None
     pr_dir = project_dir or sts.project_dir
-    root_depth = pr_dir.count(os.sep)
-    file_name = os.path.basename(raw_path)
-    def ignored(d):
-        d = d.strip()
-        return any(d == i or d.endswith(i.strip('*')) for i in sts.ignore_dirs)
-    for root, dirs, files in os.walk(pr_dir, topdown=True):
-        if ignored(os.path.basename(root)):
-            dirs.clear()
-            continue
-        if root.count(os.sep) - root_depth >= max_depth:
-            dirs.clear()
-            continue
-        if file_name in files:
-            if verbose:
-                print(f"\ncontracts._find_file_path: Found {file_name = } at {root = }")
-            return os.path.join(root, file_name)
-        dirs[:] = [d for d in dirs if not ignored(d)]
-    return None
+    return _walk_for_file(os.path.basename(raw_path), pr_dir, max_depth)
+
+_DS_SCHEMA = Path(__file__).parent.parent / 'core' / 'resources' / 'docstring_templates.yml'
+
+def load_docstring_schema(*args, **kwargs) -> dict:
+    """
+    purpose: Load allowed and required docstring keys per scope from the canonical YAML.
+    """
+    raw = yaml.safe_load(_DS_SCHEMA.read_text())
+    return {s: {'allowed': set(v['required']) | set(v.get('optional', {})),
+                'required': set(v['required'])} for s, v in raw.items()}

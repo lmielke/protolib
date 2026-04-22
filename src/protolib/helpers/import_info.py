@@ -1,156 +1,143 @@
-import ast
-import os
+"""
+script_path: src/protolib/helpers/import_info.py
+purpose: Analyse Python package import graphs and visualise module-level dependencies.
+description: |-
+  Parses source files with AST to extract import statements, builds a directed
+  graph, and renders it via graphviz. Used to audit coupling between modules and
+  detect unexpected cross-layer imports. Do not modify in clones.
+"""
+import ast, os, argparse
 import graphviz
-import argparse
-import protolib.settings as sts
-from colorama import Fore, Style
+import protolib.app.settings as sts
+from protolib.helpers.dir_context import DirContext
 
 
 class PackageInfo:
-    def __init__(self, main_file: str, *args, **kwargs):
+
+    def __init__(self, *args, main_file: str = "", **kwargs):
         self.root_dir, self.package_name = self.find_root_dir(*args, **kwargs)
-        if not self.root_dir:
-            raise RuntimeError("Root directory not found.")
+        if not self.root_dir: raise RuntimeError("Root directory not found.")
         self.main_file = main_file
         self.graph = graphviz.Digraph(comment='Package Dependency Graph')
-        self.visited_files = set()
-        self.visited_paths = set()   # full paths, for file selection
-        self.incoming_edges = {}  # Track incoming edges for each node
-        # Set default styles for the graph
-        self.graph.attr('node', style='filled', fillcolor='white')
-        self.graph.attr('edge', fontsize='10')  # Smaller font size for edges
+        self.visited_files, self.visited_paths, self.incoming_edges = set(), set(), {}
+        self._init_graph_style(*args, **kwargs)
 
-    def find_root_dir(self):
-        """
-        Determine the root directory of a Python project by locating __main__.py.
-        """
+    def _init_graph_style(self, *args, **kwargs):
+        self.graph.attr('node', style='filled', fillcolor='white')
+        self.graph.attr('edge', fontsize='10')
+
+    def find_root_dir(self, *args, **kwargs):
         for root, dirs, files in os.walk(os.getcwd()):
             dirs[:] = [d for d in dirs if d not in sts.ignore_dirs]
             if '__main__.py' in files:
                 return os.path.split(root)
         return None
 
-    def build_graph(self, filepath):
+    # ---------- graph building ----------
+
+    def build_graph(self, filepath, *args, **kwargs):
         filename = os.path.basename(filepath)
         if filename in self.visited_files:
             return
         self.visited_files.add(filename)
         self.visited_paths.add(os.path.abspath(filepath))
-        # Initialize incoming edges count if not already
-        if filename not in self.incoming_edges:
-            self.incoming_edges[filename] = 0
-        imports = self.parse_imports(filepath)
-        for imp, origin in imports:
+        self.incoming_edges.setdefault(filename, 0)
+        self._add_edges(filepath, filename, *args, **kwargs)
+
+    def _add_edges(self, filepath, filename, *args, **kwargs):
+        for imp, origin in self.parse_imports(filepath):
             next_file = self.resolve_module_path_to_file(imp)
-            if next_file:
-                next_filename = os.path.basename(next_file)
-                # Increment the incoming edge count for the target node
-                if next_filename not in self.incoming_edges:
-                    self.incoming_edges[next_filename] = 0
-                self.incoming_edges[next_filename] += 1
-                self.graph.edge(filename, next_filename, label=imp)
-                self.build_graph(next_file)
+            if not next_file: continue
+            nf = os.path.basename(next_file)
+            self.incoming_edges[nf] = self.incoming_edges.get(nf, 0) + 1
+            self.graph.edge(filename, nf, label=imp)
+            self.build_graph(next_file)
 
-    def finalize_graph(self):
-        # Determine the maximum number of incoming edges for scaling
+    def finalize_graph(self, *args, **kwargs):
         max_edges = max(self.incoming_edges.values(), default=1)
-        
-        # Set node attributes based on incoming edges
         for node, count in self.incoming_edges.items():
-            # Scale the fontsize according to the number of incoming edges
-            fontsize = '12' if node == self.main_file else str(10 + min(count * 2, 10))
-            
-            # Calculate the intensity of the red color based on incoming edges
-            if max_edges > 0:
-                intensity = int(255 * (1 - (count / max_edges)))  # Adjust for a proper scale
-            else:
-                intensity = 255  # No edges lead to lightest color
-            
-            fillcolor = f'#{255-intensity:02x}{intensity//1:02x}{intensity//1:02x}'  # Adjusting for lighter shades
-            
-            # Adjusting the fill color and font size
-            self.graph.node(node, fontsize=fontsize, fillcolor=fillcolor, style='filled')
-            self.graph.node(node, fontsize=fontsize, fillcolor='lightblue' if node == self.main_file else fillcolor)
+            fs, fc = self._node_style(node, count, max_edges)
+            self.graph.node(node, fontsize=fs, fillcolor=fc)
 
-    def create_graph(self):
-        """
-        Start the graph creation process from the specified main file.
-        """
+    def _node_style(self, node, count, max_edges, *args, **kwargs):
+        fontsize = '12' if node == self.main_file else str(10 + min(count * 2, 10))
+        if node == self.main_file:
+            return fontsize, 'lightblue'
+        intensity = int(255 * (1 - count / max(max_edges, 1)))
+        fill = f'#{255 - intensity:02x}{intensity:02x}{intensity:02x}'
+        return fontsize, fill
+
+    def create_graph(self, *args, **kwargs):
         main_path = self.locate_file(self.main_file, self.root_dir)
         if not main_path:
             raise FileNotFoundError(f"{self.main_file} not found in {self.root_dir}")
-        
         self.build_graph(main_path)
-        self.finalize_graph()  # Apply final node styles based on connectivity
+        self.finalize_graph()
         return self.graph
 
-    def parse_imports(self, filepath):
-        """
-        Parse a Python file and extract all local import statements relevant to the package.
-        """
-        with open(filepath, 'r') as file:
-            tree = ast.parse(file.read(), filepath)
+    # ---------- imports ----------
+
+    def parse_imports(self, filepath, *args, **kwargs):
+        with open(filepath, 'r') as f:
+            tree = ast.parse(f.read(), filepath)
         imports = []
         for node in ast.walk(tree):
-            if isinstance(node, ast.Import):
-                for alias in node.names:
-                    module_name = alias.name.split('.')[0]
-                    if module_name.startswith(self.package_name):
-                        imports.append((alias.name, os.path.relpath(filepath, self.root_dir).replace(os.sep, '.')))
-            elif isinstance(node, ast.ImportFrom):
-                if node.module and node.module.startswith(self.package_name):
-                    for alias in node.names:
-                        full_import_path = f"{node.module}.{alias.name}"
-                        imports.append((full_import_path, os.path.relpath(filepath, self.root_dir).replace(os.sep, '.')))
+            self._collect_imports(node, filepath, imports)
         return imports
 
-    def resolve_module_path_to_file(self, module_path):
-        """
-        Resolve a dot-separated module path to a file path by checking each segment of the path.
-        This method iteratively shortens the path from the rightmost segment until a valid file is found.
-        """
-        module_parts = module_path.split('.')
-        for i in range(len(module_parts), 0, -1):
-            potential_path = os.path.join(self.root_dir, *module_parts[:i]) + '.py'
-            potential_rel = os.path.relpath(potential_path, self.root_dir)
-            if os.path.exists(potential_path):
-                return potential_path
-            else:
-                pass
+    def _collect_imports(self, node, filepath, imports, *args, **kwargs):
+        rel = os.path.relpath(filepath, self.root_dir).replace(os.sep, '.')
+        if isinstance(node, ast.Import):
+            self._collect_import(node, rel, imports)
+        elif isinstance(node, ast.ImportFrom):
+            self._collect_from_import(node, rel, imports)
+
+    def _collect_import(self, node, rel, imports, *args, **kwargs):
+        for alias in node.names:
+            if alias.name.split('.')[0].startswith(self.package_name):
+                imports.append((alias.name, rel))
+
+    def _collect_from_import(self, node, rel, imports, *args, **kwargs):
+        if not (node.module and node.module.startswith(self.package_name)):
+            return
+        for alias in node.names:
+            imports.append((f"{node.module}.{alias.name}", rel))
+
+    # ---------- resolution ----------
+
+    def resolve_module_path_to_file(self, module_path, *args, **kwargs):
+        parts = module_path.split('.')
+        for i in range(len(parts), 0, -1):
+            path = os.path.join(self.root_dir, *parts[:i]) + '.py'
+            if os.path.exists(path):
+                return path
         return None
 
-    def get_file_list(self) -> list[dict]:
-        """
-        Returns the files discovered during graph traversal as a list of dicts
-        with file_path and file_content — ready for LLM prompt insertion.
-        Call after create_graph().
-        """
+    def get_file_list(self, *args, **kwargs) -> list[dict]:
         result = []
         for path in sorted(self.visited_paths):
-            try:
-                with open(path, 'r', encoding='utf-8') as f:
-                    content = f.read()
+            content = self._read_file(path)
+            if content is not None:
                 result.append({"file_path": path, "file_content": content})
-            except Exception:
-                pass
         return result
 
-    def locate_file(self, filename, search_dir):
-        """
-        Recursively locate a specific file within a given directory.
-        """
+    def _read_file(self, path, *args, **kwargs):
+        try:
+            with open(path, 'r', encoding='utf-8') as f:
+                return f.read()
+        except Exception:
+            return None
+
+    def locate_file(self, filename, search_dir, *args, **kwargs):
         for root, dirs, files in os.walk(search_dir):
             if filename in files:
                 return os.path.join(root, filename)
         return None
 
-def select_files(path: str = None, cursor_pos: int = None) -> list[dict]:
-    """
-    Returns the minimal set of files needed to understand the code at `path`,
-    resolved by following the import graph from that file.
-    Each entry: {"file_path": str, "file_content": str}
-    """
-    from protolib.helpers.dir_context import DirContext
+
+# ---------- entry points ----------
+
+def select_files(*args, path: str = None, cursor_pos: int = None, **kwargs) -> list[dict]:
     ctx = DirContext(path=path, cursor_pos=cursor_pos)
     if not ctx.file_name:
         return []
@@ -158,23 +145,26 @@ def select_files(path: str = None, cursor_pos: int = None) -> list[dict]:
     pkg.create_graph()
     return pkg.get_file_list()
 
-
 def set_params(*args, **kwargs):
-    parser = argparse.ArgumentParser(description="Analyze Python package structure and visualize import relationships.")
-    parser.add_argument('main_file_name', type=str, help='The name of the main Python file to trace imports from.')
-    parser.add_argument('--verbose', type=int, default=1,
-                        help='Verbose mode. If set to 1 or higher, the graph is displayed.')
+    parser = argparse.ArgumentParser(description="Analyse Python package import graph.")
+    parser.add_argument('main_file_name', type=str, help='Main Python file to trace.')
+    parser.add_argument('--verbose', type=int, default=1, help='If >=1, open graph viewer.')
     return parser.parse_args().__dict__
 
-def main(*args, verbose=1, **kwargs):
-    if not kwargs:
-        kwargs = set_params(*args, **kwargs)
-    package_info = PackageInfo(kwargs['main_file_name'])
-    graph = package_info.create_graph()
-    dot_source = graph.source
-    if verbose:
-        graph.view()  # This will open the graph using the default viewer
-    return dot_source
+def _resolve_args(*args, main_file_name="", verbose=1, **kwargs):
+    if main_file_name:
+        return main_file_name, verbose
+    params = set_params(*args, **kwargs)
+    return params["main_file_name"], params.get("verbose", verbose)
+
+def main(*args, main_file_name: str = "", verbose: int = 1, **kwargs):
+    name, verb = _resolve_args(*args, main_file_name=main_file_name, verbose=verbose, **kwargs)
+    pkg = PackageInfo(main_file=name)
+    graph = pkg.create_graph()
+    if verb:
+        graph.view()
+    return graph.source
+
 
 if __name__ == '__main__':
     main()

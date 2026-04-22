@@ -1,250 +1,35 @@
 """
-printing.py
+script_path: src/protolib/helpers/printing.py
+purpose: >-
+  Colored terminal output, text wrapping, table formatting, and structured event logging.
+description: |-
+  Provides ANSI-aware text utilities for prompt colorization, tabulate-based
+  table rendering, sound notifications, and a file-backed logger that writes warnings
+  and errors to an error log while keeping info and debug messages console-only.
+governance_exceptions:
+  - c3: "module has 308 lines (>300)"
 """
-import os, re, time
+import os, re, time, inspect, logging
 from datetime import datetime as dt
+from enum import Enum
+
 from colorama import Fore, Back, Style
-import protolib.settings as sts
-from textwrap import wrap as tw
 from tabulate import tabulate as tb
+from textwrap import wrap as tw
 
+import protolib.app.settings as sts
 
-# After the existing imports at the top of the file
+# ── platform guards ──────────────────────────────────────────
 try:
     import winsound
     SOUND_AVAILABLE = True
 except ImportError:
     SOUND_AVAILABLE = False
 
-def wrap_text(text:str, *args, max_chars:int=sts.table_max_chars, **kwargs):
-    max_chars = normalize_max_chars(max_chars, text, *args, **kwargs)
-    if type(text) == str and len(text) > max_chars:
-        wrapped = ''
-        for line in text.split('\n'):
-            if len(line) > max_chars:
-                line = '\n'.join(tw(line, max_chars))
-            wrapped += f"\n{line}"               
-        return wrapped.strip()
-    return text
+# ── compiled patterns ────────────────────────────────────────
+_ANSI_RE = re.compile(r'\x1b\[([0-9]+)(;[0-9]+)*m')
 
-def pretty_prompt(prompt:str, *args, verbose:int=0, **kwargs) -> str:
-    prompt = re.sub(r'<user_comment>\s*</user_comment>', '', prompt, flags=re.MULTILINE)
-    prompt = strip_ansi_codes(prompt)
-    prompt = clean_pipe_text(prompt)
-    # we replace the <tags> in prompt with colorized tags
-    p = (
-            prompt.replace('deliverable>', f"{Back.MAGENTA}deliverable{Style.RESET_ALL}>")
-                .replace('rag_db_matches>', f"{Back.GREEN}rag_db_matches{Style.RESET_ALL}>")
-                .replace('user_comment>', f"{Back.YELLOW}user_comment{Style.RESET_ALL}>")
-                .replace('previous_responses>', f"{Back.CYAN}previous_responses{Style.RESET_ALL}>")
-                .replace('sample>', f"{Back.CYAN}sample{Style.RESET_ALL}>")
-                .replace('io_template>', f"{Back.CYAN}io_template{Style.RESET_ALL}>")
-                .replace('INST>', f"{Back.CYAN}INST{Style.RESET_ALL}>")
-                .replace('poluted_text>', f"{Back.CYAN}poluted_text{Style.RESET_ALL}>")
-                .replace('__SAMPLE', f"__{Style.DIM}{Fore.WHITE}SAMPLE{Style.RESET_ALL}{Style.RESET_ALL}")
-                .replace('__RESPONSE SAMPLE', f"__{Style.DIM}{Fore.WHITE}RESPONSE SAMPLE{Style.RESET_ALL}{Style.RESET_ALL}")
-                .replace('__TEXT SAMPLE', f"__{Style.DIM}{Fore.WHITE}TEXT SAMPLE{Style.RESET_ALL}{Style.RESET_ALL}")
-                .replace('Strategy Prompt', f"{Fore.YELLOW}Strategy Prompt{Style.RESET_ALL}")
-        )
-    # we color markdown headers level 1 and 2 ('# Some Text' and '## Some Text') with BLUE
-    p = re.sub(r'^# ([A-Z1-9].+)$', f"{Back.BLUE}# \\1{Style.RESET_ALL}", p, flags=re.MULTILINE)
-    p = re.sub(r'^## (.+)$', f"{Fore.BLUE}## \\1{Fore.RESET}", p, flags=re.MULTILINE)
-    p = re.sub(r'^.?```(\w+)?$', f"{Fore.MAGENTA}``` \\1{Fore.RESET}", p, flags=re.MULTILINE)
-    p = re.sub(r'(.*)(https?://[^\s\'_\"]+)(.*)', f"\\1{Fore.MAGENTA}\\2{Fore.RESET}\\3", p)
-    if verbose >= 1:
-        print(f"{p.strip()}")
-    return p
-
-def pretty_dict(name:str, d:dict, *args, color=Fore.CYAN, **kwargs):
-    print(f"\n{color}{name} {Fore.RESET}\n{'*' * len(name)}")
-    for k, v in d.items():
-        print(f"{color}{k}: {Fore.RESET}{v}")
-
-def dict_to_table(name:str, d:dict, *args, **kwargs):
-    tbl_dict = wrap_table(d, *args, **kwargs)
-    # tbl_dict[name] = wrap_text(str(tbl_dict.keys()))
-    tbl = tb(tbl_dict.items(), headers=[f'name: {name}', 'value'], tablefmt='simple')
-    colored_table_underline(tbl, *args, **kwargs)
-
-
-def records_to_table(name:str, records:list, *args, **kwargs):
-    # Extract headers from the keys of the first result
-    wrapped_records = []
-    for record in records:
-        wrapped_records.append(wrap_table(record, *args, **kwargs))
-    headers = records[0].keys()
-    # Convert d to a list of values for tabulation
-    table = [key.values() for key in wrapped_records]
-
-    # Print the table using tabulate
-    colored_table_underline(tb(table, headers=headers), *args, **kwargs)
-
-def colored_table_underline(tbl, *args, up_to:int=0, color=Fore.CYAN, **kwargs):
-    print('\n')
-    for i, line in enumerate(tbl.split('\n')):
-        if i <= up_to:
-            print(f"{color}{line}{Fore.RESET}")
-        else:
-            print(line)
-
-def dict_to_table_v(name:str, d: dict, *args, **kwargs):
-    """
-    Prints the dictionary with keys as column headers and values as rows.
-    Wraps long text using wrap_text function.
-    """
-    headers = list(d.keys())  # Extract keys for column headers
-    row = []  # The row of values
-    for key, value in d.items():
-        if isinstance(value, str):
-            row.append(wrap_text(value, *args, **kwargs))
-        elif isinstance(value, dict):
-            # If the value is another dictionary, format it for display
-            row.append(
-                wrap_text(
-                    '\n'.join([f"{Fore.CYAN}{k}{Fore.RESET}: {str(v)}" for k, v in value.items()]),
-                    **kwargs,
-                )
-            )
-        elif isinstance(value, list):
-            # If the value is a list, join the list into a string
-            row.append(
-                wrap_text(
-                    '\n'.join([str(v) for v in value]),
-                    **kwargs,
-                )
-            )
-        else:
-            # Handle any other data types (e.g., numbers, bools)
-            row.append(str(value))
-    # Use tabulate to create the table
-    tbl = tb([row], headers=headers, tablefmt='simple')
-    colored_table_underline(tbl, *args, **kwargs)
-
-def wrap_table(d:dict, *args, **kwargs):
-    tbl_dict = dict(**d)
-    for kk, vs in d.items():
-        if type(vs) == str:
-            tbl_dict[kk] = wrap_text(vs, *args, **kwargs)
-        elif type(vs) == dict:
-            tbl_dict[kk] = wrap_text('\n'.join([f"{Fore.CYAN}{k}{Fore.RESET}: {str(v)}" for k, v in vs.items()]))
-        elif type(vs) == list:
-            tbl_dict[kk] = wrap_text('\n'.join([str(v) for v in vs]))
-    return tbl_dict
-
-def normalize_max_chars(max_chars:int, text, *args, **kwargs):
-    """
-    some strings contain very short texts
-    those texts can use a shorter max_chars than longer texts
-    so we re-compute max_chars to result in a minimum of 3 lines
-    """
-    if len(text) <= 50:
-        return max_chars // 5
-    elif len(text) <= 128:
-        return max_chars // 4
-    elif len(text) <= 300:
-        return max_chars // 3
-    elif len(text) <= 1200:
-        return max_chars // 2
-    else:
-        return int(max_chars * 2)
-
-def unroll_print_dict(d:dict, unroll_key:str='prompts', *args, **kwargs):
-    for k, vs in d.items():
-        if k == 'service_endpoint':
-            print(f"\t{k = }: {Fore.MAGENTA}{vs}{Fore.RESET}")
-        elif k == unroll_key:
-            print(f"\t{k = }: {len(vs)}")
-            for i, prompt in enumerate(vs):
-                start = '\n' if i != 0 else ''
-                prompt = '\n\t\t'.join(prompt[:200].split('\n'))
-                print(f"{start}\t\t{Fore.MAGENTA}{i}{Fore.RESET}: {prompt[:150]}")
-        else:
-            print(f"\t{k = }: {vs}")
-
-def pretty_print_df(df, *args, color:object=Fore.MAGENTA, sum_color:object=None, **kwargs):
-    """
-    Takes a datafram and prints it in a colored pretty format
-    df.columns will be the collumns of the table
-    """
-    tbl = tb(df, headers='keys', tablefmt='simple')
-    len_tbl = len(tbl.split('\n'))
-    for i, line in enumerate(tbl.split('\n')):
-        if i <= 1:
-            print(f"{color}{line}{Fore.RESET}")
-        elif sum_color and i == len_tbl - 1:
-            print(f"{sum_color}{'_ ' * (len(line) // 2)}{Style.RESET_ALL}")
-            print(f"{line}")
-        else:
-            print(line)
-
-# After other functions and before main(), define play_sound
-def play_sound(status: str):
-    """
-    Plays a short acoustic signal based on the given status.
-    Args:
-        status: (str) One of ["LOADED", "START", "STOP"].
-    """
-    if SOUND_AVAILABLE:
-        if status == "PROMPT":
-            winsound.Beep(600, 150)   # Lower pitch
-            winsound.Beep(1000, 150)  # Higher pitch
-        if status == "PROMPT0":
-            winsound.Beep(600, 150)   # Lower pitch
-        if status == "PROMPT1":
-            winsound.Beep(1000, 150)  # Higher pitch
-        if status == "PROMPT2":
-            winsound.Beep(1300, 150)  # Higher pitch
-        elif status == "RESPONSE":
-            winsound.Beep(1000, 150)  # Higher pitch
-            winsound.Beep(800, 150)   # Lower pitch
-            winsound.Beep(600, 150)   # Lower pitch
-        elif status == "RESPONSE0":
-            winsound.Beep(1000, 100)  # Higher pitch
-        elif status == "RESPONSE1":
-            winsound.Beep(1200, 100)  # Higher pitch
-        elif status == "RESPONSE2":
-            winsound.Beep(1600, 100)  # Higher pitch
-        elif status == "HAPPY":
-            winsound.Beep(1400, 100)  # Higher pitch
-            winsound.Beep(1600, 100)  # Higher pitch
-            winsound.Beep(2000, 100)  # Higher pitch
-            time.sleep(.1)
-        elif status == "ERROR":
-            winsound.Beep(200, 150)
-            winsound.Beep(100, 550)
-
-def strip_ansi_codes(text: str) -> str:
-    """
-    Strip ANSI escape sequences from a text string.
-    Args:
-        text (str): Text containing ANSI escape codes.
-    Returns:
-        str: Text with ANSI codes removed.
-    """
-    ansi_escape = re.compile(r'\x1b\[([0-9]+)(;[0-9]+)*m')
-    cleaned = ansi_escape.sub('', text)
-    # we remove windows artefacts such as \r
-    cleaned = cleaned.replace('\r', '').replace('\\n', '\n')
-    return cleaned
-
-def clean_pipe_text(text: str) -> str:
-    """WHY: Keep Unicode intact; unescape \n/\t; strip ANSI; fix cp1252-mojibake."""
-    t = re.sub(r'\x1b\[[0-9;]*[A-Za-z]', '', text)  # remove ANSI
-    t = (t.replace('\\r\\n', '\r\n')
-         .replace('\\n', '\n')
-         .replace('\\r', '\r')
-         .replace('\\t', '\t'))
-    if 'â' in t:  # heuristic: fix UTF-8 seen as cp1252
-        try: t = t.encode('latin-1').decode('utf-8')
-        except Exception: pass
-    return t
-
-# logging and printing
-import inspect, logging
-from enum import Enum
-from colorama import Fore, Style
-
-# ── logger setup ────────────────────────────────────────────────
+# ── logger setup ─────────────────────────────────────────────
 event_logger = logging.getLogger("event_logger")
 event_logger.setLevel(logging.INFO)
 event_logger.propagate = False
@@ -252,7 +37,7 @@ if not event_logger.handlers:
     event_logger.addHandler(logging.NullHandler())
 
 
-# ── color enums & mappings ──────────────────────────────────────
+# ── Color enum & level mappings ──────────────────────────────
 class Color(Enum):
     RED = Fore.RED
     YELLOW = Fore.YELLOW
@@ -274,51 +59,250 @@ LEVEL_COLORS = dict(
 MODULE_COLORS: dict[str, Color] = {}
 
 
-# ── internals ───────────────────────────────────────────────────
-def _caller_info() -> tuple[str, str, str]:
+# ── tag & keyword color maps for pretty_prompt ───────────────
+_TAG_COLORS = {
+    'deliverable': Back.MAGENTA,
+    'rag_db_matches': Back.GREEN,
+    'user_comment': Back.YELLOW,
+    'previous_responses': Back.CYAN,
+    'sample': Back.CYAN,
+    'io_template': Back.CYAN,
+    'INST': Back.CYAN,
+    'poluted_text': Back.CYAN,
+}
+
+_DIM_KEYWORDS = ('__SAMPLE', '__RESPONSE SAMPLE', '__TEXT SAMPLE')
+
+_MD_PATTERNS = [
+    (r'^# ([A-Z1-9].+)$', f"{Back.BLUE}# \\1{Style.RESET_ALL}", re.MULTILINE),
+    (r'^## (.+)$', f"{Fore.BLUE}## \\1{Fore.RESET}", re.MULTILINE),
+    (r'^.?```(\w+)?$', f"{Fore.MAGENTA}``` \\1{Fore.RESET}", re.MULTILINE),
+    (r'(.*)(https?://[^\s\'_\"]+)(.*)', f"\\1{Fore.MAGENTA}\\2{Fore.RESET}\\3", 0),
+]
+
+# ── threshold table for normalize_max_chars ──────────────────
+_MAX_CHARS_THRESHOLDS = [(50, 5), (128, 4), (300, 3), (1200, 2)]
+
+# ── sound dispatch for play_sound ────────────────────────────
+_SOUND_MAP = {
+    "PROMPT":    [(600, 150), (1000, 150)],
+    "PROMPT0":   [(600, 150)],
+    "PROMPT1":   [(1000, 150)],
+    "PROMPT2":   [(1300, 150)],
+    "RESPONSE":  [(1000, 150), (800, 150), (600, 150)],
+    "RESPONSE0": [(1000, 100)],
+    "RESPONSE1": [(1200, 100)],
+    "RESPONSE2": [(1600, 100)],
+    "HAPPY":     [(1400, 100), (1600, 100), (2000, 100)],
+    "ERROR":     [(200, 150), (100, 550)],
+}
+
+
+# ── internal helpers ─────────────────────────────────────────
+
+def _colorize_tags(text: str, *args, **kwargs) -> str:
+    for name, color in _TAG_COLORS.items():
+        text = text.replace(f'{name}>', f"{color}{name}{Style.RESET_ALL}>")
+    return text
+
+def _colorize_keywords(text: str, *args, **kwargs) -> str:
+    for kw in _DIM_KEYWORDS:
+        styled = f"__{Style.DIM}{Fore.WHITE}{kw[2:]}{Style.RESET_ALL}{Style.RESET_ALL}"
+        text = text.replace(kw, styled)
+    replacement = f"{Fore.YELLOW}Strategy Prompt{Style.RESET_ALL}"
+    text = text.replace('Strategy Prompt', replacement)
+    return text
+
+def _colorize_markdown(text: str, *args, **kwargs) -> str:
+    for pattern, replacement, flags in _MD_PATTERNS:
+        text = re.sub(pattern, replacement, text, flags=flags)
+    return text
+
+def _format_value(value, *args, **kwargs) -> str:
+    if isinstance(value, str): return wrap_text(value, *args, **kwargs)
+    if isinstance(value, dict):
+        joined = '\n'.join(f"{Fore.CYAN}{k}{Fore.RESET}: {str(v)}" for k, v in value.items())
+        return wrap_text(joined, **kwargs)
+    if isinstance(value, list): return wrap_text('\n'.join([str(v) for v in value]), **kwargs)
+    return str(value)
+
+def _print_unrolled_prompts(k, vs, *args, **kwargs):
+    print(f"\t{k = }: {len(vs)}")
+    for i, prompt in enumerate(vs):
+        start = '\n' if i != 0 else ''
+        prompt = '\n\t\t'.join(prompt[:200].split('\n'))
+        print(f"{start}\t\t{Fore.MAGENTA}{i}{Fore.RESET}: {prompt[:150]}")
+
+def _print_df_line(line, *args, i: int, total: int, color, sum_color, **kwargs):
+    if i <= 1:
+        print(f"{color}{line}{Fore.RESET}")
+    elif sum_color and i == total - 1:
+        sep = f"{sum_color}{'_ ' * (len(line) // 2)}{Style.RESET_ALL}"
+        print(f"{sep}\n{line}")
+    else:
+        print(line)
+
+def _caller_info(*args, **kwargs) -> tuple[str, str, str]:
     f = inspect.currentframe().f_back.f_back
     cls = f.f_locals.get("self")
     mod = f.f_globals.get("__name__", "")
     return mod, (cls.__class__.__name__ if cls else ""), f.f_code.co_name
 
-
 def _ready_logger(*args, p: str | None, **kwargs) -> None:
-    """Attach file handler only once *_error.log is ready."""
-    if not (isinstance(p, str) and p.endswith("error.log")):
-        return
-    if any(not isinstance(h, logging.NullHandler) for h in event_logger.handlers):
-        return
+    """
+    purpose: Attach file handler only once error.log is ready.
+    """
+    if not (isinstance(p, str) and p.endswith("error.log")): return
+    if any(not isinstance(h, logging.NullHandler) for h in event_logger.handlers): return
     os.makedirs(os.path.dirname(p) or ".", exist_ok=True)
     h = logging.FileHandler(p, encoding="utf-8")
     h.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(message)s"))
     event_logger.addHandler(h)
 
+def _log_style(level: str, *args, mod: str = "", **kwargs):
+    style = (Style.BRIGHT if level in ("debug", "dev")
+             else Style.NORMAL if level else Style.DIM)
+    color = LEVEL_COLORS.get(level, MODULE_COLORS.get(mod, LEVEL_COLORS["info"]))
+    return style, color
 
-# ── public API ──────────────────────────────────────────────────
-def logprint(msg: str, *args, level:str=None, console_log:bool=True, **kwargs) -> str:
-    """
-    Only WARNING and ERROR are logged.
-    INFO/DEBUG remain console-only.
-    """
-    error_path = getattr(sts, "error_path", None)
-    assert error_path, "sts.error_path not set"
-    _ready_logger(p=error_path)
-    p_level = "" if level is None else level.lower()
-    level = "info" if level is None else level.lower()
-    mod, cls, func = _caller_info()
-    mod = mod.split(".")[-1]
-    origin = f"{mod}.{cls + '.' if cls else ''}{func} {p_level.upper()}"
-    style = Style.BRIGHT if p_level in {"debug", "dev"} else Style.NORMAL if p_level else \
-                                                                                    Style.DIM
-    color = (
-        LEVEL_COLORS[level]
-        if level in ("error", "warning", "debug", "dev")
-        else MODULE_COLORS.get(mod, LEVEL_COLORS["info"])
-    )
-    # log only warnings and errors
+def _log_emit(msg, *args, level: str, origin: str, mod: str, console_log: bool, **kwargs):
+    style, color = _log_style(level, mod=mod)
     if level in ("warning", "error"):
-        getattr(event_logger, level, event_logger.warning)(f"{origin}:\n{msg}\n")
-    # always print
+        log_fn = getattr(event_logger, level, event_logger.warning)
+        log_fn(f"{origin}:\n{msg}\n")
     if console_log:
         print(f"\n{color.value}{style}{origin}:\n{Fore.RESET}{msg}{Style.RESET_ALL}\n")
     return msg
+
+
+# ── public API ───────────────────────────────────────────────
+
+def normalize_max_chars(max_chars: int, text, *args, **kwargs):
+    """
+    purpose: Re-compute max_chars to produce a minimum of ~3 wrapped lines.
+    """
+    for bound, divisor in _MAX_CHARS_THRESHOLDS:
+        if len(text) <= bound:
+            return max_chars // divisor
+    return int(max_chars * 2)
+
+def wrap_text(text: str, *args, max_chars: int = sts.table_max_chars, **kwargs):
+    max_chars = normalize_max_chars(max_chars, text, *args, **kwargs)
+    if not isinstance(text, str) or len(text) <= max_chars: return text
+    wrapped = ['\n'.join(tw(l, max_chars)) if len(l) > max_chars else l
+               for l in text.split('\n')]
+    return '\n'.join(wrapped).strip()
+
+def wrap_table(d: dict, *args, **kwargs):
+    tbl_dict = dict(**d)
+    for kk, vs in d.items(): tbl_dict[kk] = _wrap_value(vs, *args, **kwargs)
+    return tbl_dict
+
+def _wrap_value(vs, *args, **kwargs):
+    if isinstance(vs, str): return wrap_text(vs, *args, **kwargs)
+    if isinstance(vs, dict):
+        joined = '\n'.join(f"{Fore.CYAN}{k}{Fore.RESET}: {str(v)}" for k, v in vs.items())
+        return wrap_text(joined)
+    if isinstance(vs, list): return wrap_text('\n'.join(str(v) for v in vs))
+    return vs
+
+def strip_ansi_codes(text: str, *args, **kwargs) -> str:
+    r"""
+    purpose: Strip ANSI escape sequences, carriage returns, and unescape \n.
+    """
+    cleaned = _ANSI_RE.sub('', text)
+    return cleaned.replace('\r', '').replace('\\n', '\n')
+
+def clean_pipe_text(text: str, *args, **kwargs) -> str:
+    r"""
+    purpose: Keep Unicode intact; unescape \n/\t; strip ANSI; fix cp1252-mojibake.
+    """
+    t = re.sub(r'\x1b\[[0-9;]*[A-Za-z]', '', text)
+    for a, b in [('\\r\\n', '\r\n'), ('\\n', '\n'), ('\\r', '\r'), ('\\t', '\t')]:
+        t = t.replace(a, b)
+    if 'â' in t:
+        try: t = t.encode('latin-1').decode('utf-8')
+        except Exception: pass
+    return t
+
+def pretty_prompt(prompt: str, *args, verbose: int = 0, **kwargs) -> str:
+    prompt = re.sub(r'<user_comment>\s*</user_comment>', '', prompt, flags=re.MULTILINE)
+    p = clean_pipe_text(strip_ansi_codes(prompt))
+    p = _colorize_markdown(_colorize_keywords(_colorize_tags(p)))
+    if verbose >= 1: print(f"{p.strip()}")
+    return p
+
+def pretty_dict(name: str, d: dict, *args, color=Fore.CYAN, **kwargs):
+    print(f"\n{color}{name} {Fore.RESET}\n{'*' * len(name)}")
+    for k, v in d.items():
+        print(f"{color}{k}: {Fore.RESET}{v}")
+
+def dict_to_table(name: str, d: dict, *args, **kwargs):
+    tbl_dict = wrap_table(d, *args, **kwargs)
+    colored_table_underline(
+        tb(tbl_dict.items(), headers=[f'name: {name}', 'value'], tablefmt='simple'),
+        *args, **kwargs)
+
+def records_to_table(name: str, records: list, *args, **kwargs):
+    wrapped = [wrap_table(r, *args, **kwargs) for r in records]
+    headers = records[0].keys()
+    table = [r.values() for r in wrapped]
+    colored_table_underline(tb(table, headers=headers), *args, **kwargs)
+
+def colored_table_underline(tbl, *args, up_to: int = 0, color=Fore.CYAN, **kwargs):
+    print('\n')
+    for i, line in enumerate(tbl.split('\n')):
+        if i <= up_to:
+            print(f"{color}{line}{Fore.RESET}")
+        else:
+            print(line)
+
+def dict_to_table_v(name: str, d: dict, *args, **kwargs):
+    """
+    purpose: Prints dict with keys as column headers and values as rows.
+    """
+    row = [_format_value(v, *args, **kwargs) for v in d.values()]
+    colored_table_underline(
+        tb([row], headers=list(d.keys()), tablefmt='simple'), *args, **kwargs)
+
+def unroll_print_dict(d: dict, unroll_key: str = 'prompts', *args, **kwargs):
+    for k, vs in d.items():
+        if k == 'service_endpoint':
+            print(f"\t{k = }: {Fore.MAGENTA}{vs}{Fore.RESET}")
+        elif k == unroll_key:
+            _print_unrolled_prompts(k, vs, *args, **kwargs)
+        else:
+            print(f"\t{k = }: {vs}")
+
+def pretty_print_df(df, *args, color=Fore.MAGENTA, sum_color=None, **kwargs):
+    """
+    purpose: Takes a dataframe and prints it in a colored pretty format.
+    """
+    lines = tb(df, headers='keys', tablefmt='simple').split('\n')
+    for i, line in enumerate(lines):
+        _print_df_line(line, i=i, total=len(lines), color=color, sum_color=sum_color)
+
+def play_sound(status: str, *args, **kwargs):
+    """
+    purpose: Plays a short acoustic signal based on the given status.
+    """
+    if not SOUND_AVAILABLE:
+        return
+    for freq, dur in _SOUND_MAP.get(status, []):
+        winsound.Beep(freq, dur)
+    if status == "HAPPY":
+        time.sleep(.1)
+
+def logprint(msg: str, *args, level: str = None, console_log: bool = True, **kwargs) -> str:
+    """
+    purpose: Only WARNING and ERROR are logged.
+    description: INFO/DEBUG remain console-only.
+    """
+    assert getattr(sts, "error_path", None), "sts.error_path not set"
+    _ready_logger(p=sts.error_path)
+    p_level = (level or "").lower()
+    mod, cls, func = _caller_info()
+    mod = mod.split(".")[-1]
+    origin = f"{mod}.{cls + '.' if cls else ''}{func} {p_level.upper()}"
+    return _log_emit(
+        msg, level=p_level or "info", origin=origin, mod=mod, console_log=console_log)

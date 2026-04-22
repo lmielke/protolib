@@ -26,22 +26,25 @@ Template package for all protolib-based clones. All other packages (`bridge`, `s
 - `proto info` — package info
 - `proto info -i package python -v 1` — detailed info
 - `proto server` — start HTTP server (default port 9001)
-- `proto clone -i <name>` — clone template into a new package (always ask user approval before running)
+- `proto-admin clone -pr <pr> -n <pkg> -a <alias> -t <dir> --port <n>` — clone template
+- `proto-admin sync` — push core/+helpers/ to all registered clones (recursive)
 
 ## Project Structure
-- `src/protolib/apis/` — API entry points, each exposes `main(*args, **kwargs)`
-- `src/protolib/helpers/` — utility modules
-- `src/protolib/creator/` — clone logic
-- `src/protolib/protopy.py` — core logic (DefaultClass)
-- `src/protolib/registry.py` — registry connector
-- `src/protolib/settings.py` — configuration
-- `src/protolib/contracts.py` — validation stubs (overridden in clones)
-- `src/protolib/resources/` — files copied to new packages on clone
+- `src/protolib/app/` — application layer (apis, arguments, contracts, protopy, settings)
+- `src/protolib/core/` — framework layer (admin, arguments, registry, settings, VERSION, apis/, creator/)
+- `src/protolib/helpers/` — pure utilities (no app/core dependencies)
+- `src/protolib/test/` — integration tests
+- `src/protolib/app/resources/` — CLAUDE.md + .clone/ skeleton (inherited by clones via copytree)
+
+## Entry Points
+- `proto` → `app.protopy:main` (application APIs)
+- `proto-admin` → `core.admin:main` (framework ops: clone, sync)
 
 ## Clone Notes
-- Shared modules must not hardcode package-specific dependencies.
-- `resources/CLAUDE.md` is the minimal skeleton shipped to clones — keep it generic.
-- `ignore_dirs` in `settings.py` controls what clone skips. `.claude` must NOT be listed.
-- Text replacement in clone handles renaming (`protolib` → new name) across all copied files.
+- Self-similar: clones receive the full source unmodified — no resource copying, no marker stripping.
+- `ignore_dirs` in `core/settings.py` controls what `shutil.copytree` skips during clone. `.claude` must NOT be listed.
+- Aliases should be ≥ 3 characters to avoid collateral text substitutions.
+- `app/` is user-owned in clones; `core/` + `helpers/` stay in sync with protolib via `proto-admin sync`.
+
 ## Conventions
 - Package manager: `uv` — use `uv sync`, `uv run`, `uv add` etc. Do not use pip directly.

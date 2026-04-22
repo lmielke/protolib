@@ -18,7 +18,6 @@ dependencies = [
     "psutil",
     "pyperclip",
     "python-dotenv",
-    "pyttsx3",
     "pyyaml",
     "requests",
     "rich",
@@ -37,7 +36,8 @@ dev = [
 ]
 
 [project.scripts]
-proto = "protolib.__main__:main"
+proto = "protolib.app.protopy:main"
+proto-admin = "protolib.core.admin:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]

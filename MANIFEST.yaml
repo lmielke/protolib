@@ -1,0 +1,4 @@
+# Manually maintained module/class inventory for app/ only.
+# Add new modules and classes here after review.
+# Missing entries trigger warnings in test_standards.py.
+modules: {}

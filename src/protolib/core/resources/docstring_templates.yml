@@ -1,0 +1,44 @@
+# script_path: src/protolib/core/resources/docstring_templates.yml
+# purpose: "Single source of truth for protolib docstring schema — allowed and required keys per scope."
+# update_rules: "Update only when governance rules add or remove docstring keys."
+#
+# Docstring templates for protolib governance (rules: c_dfmt, c17)
+# Consumed by: test_governance.py, test_docstring_conformance.py
+#
+# Structure: scope → required | optional → key: <sample value>
+# Sample values are illustrative — loaders extract key names only, values are nullified.
+# All docstrings are YAML front-matter blocks embedded in Python triple-quote strings.
+
+# ── module ────────────────────────────────────────────────────────────────────
+# Every non-test, non-init source module must have a module-level docstring.
+module:
+  required:
+    script_path: "src/protolib/path/to/file.py"   # relative path from repo root
+    purpose: "Single-line statement of module intent."
+  optional:
+    description: >-
+      Expanded explanation when purpose alone is insufficient.
+      Use YAML block scalar (>- or |) for multiline prose.
+    update_rules: "Describe when and by whom this file should be updated."
+    governance_exceptions:
+      - c25: "Justified reason for suppressing this rule in this module."
+
+# ── class ─────────────────────────────────────────────────────────────────────
+# Class docstrings are encouraged but not mandatory (c_dfmt validates shape if present).
+class:
+  required:
+    purpose: "Single-line statement of class responsibility."
+  optional:
+    description: "Expanded explanation of class design, constraints, or usage."
+    governance_exceptions:
+      - c2: "Justified reason."
+
+# ── def ───────────────────────────────────────────────────────────────────────
+# Function/method docstrings are encouraged but not mandatory.
+def:
+  required:
+    purpose: "Single-line statement of what this function does."
+  optional:
+    description: "Expanded explanation, edge cases, or constraints."
+    governance_exceptions:
+      - c1: "Justified reason."
