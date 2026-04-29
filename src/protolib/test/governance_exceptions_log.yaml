@@ -1,29 +1,30 @@
-generated_at: '2026-04-22T09:44:57'
+generated_at: '2026-04-29T15:58:52'
 total: 20
 by_rule:
+  c25:
+  - file: app/protopy.py
+    scope: def
+    line: 38
+    node: _check_governance
+    tech: local import in _check_governance() — move to module top
+    matches: 0
   c8:
-  - file: app/settings.py
+  - file: helpers/collections.py
     scope: module
     line: 1
-    node: settings.py
+    node: collections.py
+    tech: no class definition — verify OOP intent
+    matches: 1
+  - file: app/arguments.py
+    scope: module
+    line: 1
+    node: arguments.py
     tech: no class definition — verify OOP intent
     matches: 1
   - file: core/creator/archive.py
     scope: module
     line: 1
     node: archive.py
-    tech: no class definition — verify OOP intent
-    matches: 1
-  - file: core/arguments.py
-    scope: module
-    line: 1
-    node: arguments.py
-    tech: no class definition — verify OOP intent
-    matches: 1
-  - file: core/settings.py
-    scope: module
-    line: 1
-    node: settings.py
     tech: no class definition — verify OOP intent
     matches: 1
   - file: app/apis/entry_point.py
@@ -38,22 +39,34 @@ by_rule:
     node: discover.py
     tech: no class definition — verify OOP intent
     matches: 1
-  - file: app/contracts.py
+  - file: app/settings.py
     scope: module
     line: 1
-    node: contracts.py
+    node: settings.py
     tech: no class definition — verify OOP intent
     matches: 1
-  - file: app/arguments.py
+  - file: core/arguments.py
     scope: module
     line: 1
     node: arguments.py
     tech: no class definition — verify OOP intent
     matches: 1
-  - file: helpers/collections.py
+  - file: core/apis/info.py
     scope: module
     line: 1
-    node: collections.py
+    node: info.py
+    tech: no class definition — verify OOP intent
+    matches: 1
+  - file: core/settings.py
+    scope: module
+    line: 1
+    node: settings.py
+    tech: no class definition — verify OOP intent
+    matches: 1
+  - file: app/apis/select_files.py
+    scope: module
+    line: 1
+    node: select_files.py
     tech: no class definition — verify OOP intent
     matches: 1
   - file: core/apis/register.py
@@ -68,25 +81,25 @@ by_rule:
     node: expose_api.py
     tech: no class definition — verify OOP intent
     matches: 1
-  - file: core/apis/info.py
-    scope: module
-    line: 1
-    node: info.py
-    tech: no class definition — verify OOP intent
-    matches: 1
   - file: core/apis/announce.py
     scope: module
     line: 1
     node: announce.py
     tech: no class definition — verify OOP intent
     matches: 1
-  - file: app/apis/select_files.py
+  - file: app/contracts.py
     scope: module
     line: 1
-    node: select_files.py
+    node: contracts.py
     tech: no class definition — verify OOP intent
     matches: 1
   c41:
+  - file: app/arguments.py
+    scope: module
+    line: 1
+    node: arguments.py
+    tech: duplicate basename at app/arguments.py, core/arguments.py
+    matches: 1
   - file: app/settings.py
     scope: module
     line: 1
@@ -105,23 +118,10 @@ by_rule:
     node: settings.py
     tech: duplicate basename at app/settings.py, core/settings.py
     matches: 1
-  - file: app/arguments.py
-    scope: module
-    line: 1
-    node: arguments.py
-    tech: duplicate basename at app/arguments.py, core/arguments.py
-    matches: 1
   c3:
   - file: helpers/printing.py
     scope: module
     line: 1
     node: printing.py
     tech: module has 308 lines (>300)
-    matches: 1
-  c25:
-  - file: app/protopy.py
-    scope: module
-    line: 1
-    node: protopy.py
-    tech: local import in _check_governance() — move to module top
     matches: 1

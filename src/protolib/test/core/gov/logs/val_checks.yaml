@@ -1,0 +1,362 @@
+# script_path: src/protolib/test/core/gov/logs/val_checks.yaml
+# purpose: "Audit log for governance validators themselves. Tracks which rules have been
+#          verified (logic + thresholds + messages) so future migration phases skip them."
+# update_rules: "Append-only per code. Update status / audited_at when re-audited.
+#               status values: ok | fix-needed | not-implemented | unaudited."
+last_updated: '2026-04-29'
+audited:
+    c1:
+        status: ok
+        audited_at: '2026-04-29'
+        helper: src/protolib/test/core/gov/helpers/c1.py
+        thresholds: {warn: 7, max: 10}
+        notes: |-
+            Logic verified — `n > warn` for warn band, `n > max` for error.
+            Inclusive-upper-bound semantics: clean iff n ≤ warn. Message wording
+            corrected in this audit (was "warn ≥{warn}", now "warn >{warn}" to
+            match `n > warn` condition). Fires correctly on real source: 9 warns
+            at n=8 (one above warn=7). Doc/setting mismatch with @rules/def_gov.md
+            ("shorter than 7") logged separately as a doc question.
+    c11:
+        status: ok
+        audited_at: '2026-04-29'
+        helper: src/protolib/test/core/gov/helpers/c11.py
+        thresholds: {warn: 90, max: 95}
+        notes: |-
+            Logic verified — same `n > warn` / `n > max` shape as c1. Inclusive-
+            upper-bound semantics match @rules/code_style_python.md "≤ 95". Message
+            wording corrected (≥ → >). Fires correctly on real source: 42 warns
+            with lengths 91-95.
+    c90_1:
+        status: ok
+        audited_at: '2026-04-29'
+        helper: src/protolib/test/core/gov/helpers/c90_1.py
+        thresholds: {required: 'dict-by-scope', allowed: 'dict-by-scope', pkg: 'protolib'}
+        notes: |-
+            Real body implemented. Walks module/class/def docstring nodes via ast,
+            parses YAML front-matter (head before first blank line). Emits errors
+            for: module-level missing docstring; non-mapping front-matter; missing
+            required keys; unknown keys; module script_path mismatch with src/<pkg>/<rel>.
+            Threaded `pkg` via core_sts.package_name from governance.py master so
+            clones inherit correct PKG without per-clone helper edits.
+            Verified on synthetic broken module: detects unknown_key, script_path
+            mismatch, bad-front-matter at class/def. Real protolib source is clean
+            (0 violations) — expected since all source docstrings conform.
+    c90_2:
+        status: ok
+        audited_at: '2026-04-29'
+        helper: src/protolib/test/core/gov/helpers/c90_2.py
+        thresholds: {scope_allowed: 'dict-by-scope'}
+        notes: |-
+            Real body implemented. For every docstring-bearing node, reads
+            governance_exceptions and checks each entry's code against
+            scope_allowed[scope]. Codes not allowed at the declaration scope
+            produce an error. Cannot be suppressed.
+            Verified on synthetic input: detects c1 declared at module scope (def-
+            only), c999 unknown code, def-scope mismatches. Real source is clean
+            (0 violations) — expected since all governance_exceptions entries
+            already align with scope_allowed.
+            Note: Differs from legacy c_dscope which cross-referenced existing
+            file_records; this version uses static scope_allowed config (simpler,
+            no cross-rule dependency, fits the dumb-helper contract).
+    c3:
+        status: ok
+        audited_at: '2026-04-29'
+        helper: src/protolib/test/core/gov/helpers/c3.py
+        thresholds: {warn: 300, max: 500, min_lines: 10}
+        notes: |-
+            Migrated from legacy. Same `n > warn` / `n > max` shape as c1/c11.
+            min_lines floor (10) added to settings.yml — was a hardcoded constant
+            in legacy. Module-scope record. Verified on synthetic broken module
+            (no fire — too short) and real source: 1 warn on helpers/printing.py
+            (308 lines, just over warn=300). Threshold matches @rules/code_style_python.md.
+    c5:
+        status: ok
+        audited_at: '2026-04-29'
+        helper: src/protolib/test/core/gov/helpers/c5.py
+        thresholds: {min_body_lines: 2}
+        notes: |-
+            Migrated from legacy. AST-based instead of regex parse_defs:
+            checks node.args.vararg and .kwarg directly. Two emission paths
+            preserved: kwargs-without-args (always warn), missing-both (warn
+            only when body has > min_body_lines real lines, gated by _code_lines).
+            Verified on synthetic: detected bad_sig() (3 lines, missing both)
+            and kwargs_only() (kwargs but no args). Real source clean.
+    c12:
+        status: ok
+        audited_at: '2026-04-29'
+        helper: src/protolib/test/core/gov/helpers/c12.py
+        thresholds: {max_classes: 5}
+        notes: |-
+            Migrated. Counts top-level ClassDef in tree.body (legacy used regex).
+            Module-scope. Verified on synthetic (6 classes → 1 warn). Real source
+            clean — no module exceeds 5 classes.
+    c14:
+        status: ok
+        audited_at: '2026-04-29'
+        helper: src/protolib/test/core/gov/helpers/c14.py
+        thresholds: {max_elif: 3}
+        notes: |-
+            Migrated. AST-based: walks each FunctionDef, finds longest elif chain
+            via If.orelse traversal (legacy used regex `elif ` count which over-
+            counted nested non-elif if/else). Verified on synthetic 4-elif chain
+            → 1 warn. Real source clean.
+    c15:
+        status: ok
+        audited_at: '2026-04-29'
+        helper: src/protolib/test/core/gov/helpers/c15.py
+        thresholds: {warn_col: 16, max_col: 20}
+        notes: |-
+            Migrated. Tokenize-based with bracket-continuation skip preserved.
+            Pure-functional refactor using mutable state-dict pattern (no class)
+            so each helper function stays under c1. Verified on synthetic: emits
+            warn at col=20 and error at col=24. Real source clean.
+    c17:
+        status: ok
+        audited_at: '2026-04-29'
+        helper: src/protolib/test/core/gov/helpers/c17.py
+        thresholds: {min_words: 25, min_sentences: 3}
+        notes: |-
+            Narrowed scope from legacy. Now description-length only — docstring
+            presence and front-matter shape devolved to c90_1 (avoids duplicate
+            error emission). Passes if EITHER min_words OR min_sentences is met.
+            Verified on synthetic short-docstring → warn. Real source clean.
+    c21:
+        status: ok
+        audited_at: '2026-04-29'
+        helper: src/protolib/test/core/gov/helpers/c21.py
+        thresholds: {min_fns: 3}
+        notes: |-
+            Migrated. _COMMON allowlist preserved verbatim from legacy. Uses
+            base.parse_defs to walk top-of-body assignments (regex-based).
+            Module-scope record per repeated name. Verified on synthetic: 'foo'
+            in 3 fns → 1 warn. Real source clean.
+    c24:
+        status: ok
+        audited_at: '2026-04-29'
+        helper: src/protolib/test/core/gov/helpers/c24.py
+        thresholds: {blanks_before_def: 1, blanks_before_class: 2}
+        notes: |-
+            Migrated. Decorator-aware via _block_top. Allows 0 blanks (file
+            start) or the configured value. Verified on synthetic adjacent-def
+            → 2 warns. Real source clean. Auto-fixable via auto_correct (legacy
+            registration to be re-wired in Phase 9).
+    c36:
+        status: ok
+        audited_at: '2026-04-29'
+        helper: src/protolib/test/core/gov/helpers/c36.py
+        thresholds: {max_entries: 8}
+        notes: |-
+            Migrated. AST in_def gate preserved; legacy SKIP_NAMES allowlist
+            removed (no longer needed since module-level literals are allowed
+            via the in_def=False initial state). Verified on synthetic 9-entry
+            dict in def → 1 warn. Real source clean.
+    c2:
+        status: ok
+        audited_at: '2026-04-29'
+        helper: src/protolib/test/core/gov/helpers/c2.py
+        thresholds: {exempt_names: [main]}
+        notes: |-
+            Phase 6 migration. AST-based: walks tree.body for FunctionDef nodes
+            with single-statement bodies (Expr/Return/Pass), excluding dunders
+            and exempt_names. Real source clean.
+    c4:
+        status: ok
+        audited_at: '2026-04-29'
+        helper: src/protolib/test/core/gov/helpers/c4.py
+        thresholds: {}
+        notes: |-
+            Phase 3 (regex). Detects `kwargs.get(...)` and `kwargs[...]` access
+            inside def bodies. Module-level _PAT constant. Real source clean.
+    c6:
+        status: ok
+        audited_at: '2026-04-29'
+        helper: src/protolib/test/core/gov/helpers/c6.py
+        thresholds: {}
+        notes: |-
+            Phase 6. AST-walk: counts statements per line via lineno collisions.
+            Mandatory-fix; cannot be suppressed. Real source clean.
+    c7:
+        status: ok
+        audited_at: '2026-04-29'
+        helper: src/protolib/test/core/gov/helpers/c7.py
+        thresholds: {}
+        notes: |-
+            Phase 3 (regex). Detects bare `eval(` / `exec(` calls. Module-level
+            _PAT constant. Mandatory-fix. Real source clean.
+    c8:
+        status: ok
+        audited_at: '2026-04-29'
+        helper: src/protolib/test/core/gov/helpers/c8.py
+        thresholds: {enum_bases: '\((\w+\.)?(Enum|IntEnum|StrEnum|Flag|IntFlag)\)'}
+        notes: |-
+            Phase 5. Module-scope record when no ClassDef present, modulo enum-
+            base regex auto-exempt. Suppressible at module scope via
+            governance_exceptions: c8. After 2026-04-29 suppression-filter wire-
+            in (`_module_excs` in base.py), all 14 prior false-fires resolved
+            via existing module-scope exceptions in source.
+    c10:
+        status: ok
+        audited_at: '2026-04-29'
+        helper: src/protolib/test/core/gov/helpers/c10.py
+        thresholds: {allowed_subpkgs: [app, core, helpers, test], pkg: 'protolib'}
+        notes: |-
+            Phase 4 (PKG-aware). PKG threaded via core_sts.package_name from
+            governance.py master so clones inherit correct PKG. Detects
+            `from <pkg> import X` where X not in allowed_subpkgs. Real source
+            clean.
+    c13:
+        status: ok
+        audited_at: '2026-04-29'
+        helper: src/protolib/test/core/gov/helpers/c13.py
+        thresholds: {}
+        notes: |-
+            Phase 6. Walks tree.body in order; emits when first FunctionDef
+            precedes any subsequent ClassDef. Module-scope record. Real source
+            clean.
+    c16:
+        status: ok
+        audited_at: '2026-04-29'
+        helper: src/protolib/test/core/gov/helpers/c16.py
+        thresholds: {exempt_names: [__init__]}
+        notes: |-
+            Phase 6. AST-based: FunctionDef body == [Pass] && name not in
+            exempt_names. Suppressible at def scope. Real source clean.
+    c18:
+        status: ok
+        audited_at: '2026-04-29'
+        helper: src/protolib/test/core/gov/helpers/c18.py
+        thresholds: {}
+        notes: |-
+            Phase 7 (cross-file). For each non-test module, checks for paired
+            test/test_<basename>.py under the test/ subtree. Mandatory-fix.
+            Real source clean.
+    c19:
+        status: ok
+        audited_at: '2026-04-29'
+        helper: src/protolib/test/core/gov/helpers/c19.py
+        thresholds: {}
+        notes: |-
+            Phase 6. AST-walk over arg defaults; flags List/Dict/Set literals.
+            Mandatory-fix; cannot be suppressed. Real source clean.
+    c20:
+        status: ok
+        audited_at: '2026-04-29'
+        helper: src/protolib/test/core/gov/helpers/c20.py
+        thresholds: {}
+        notes: |-
+            Phase 6. Module-scope: detects `def main` followed by an `if
+            __name__ ==` guard at top level. Mandatory-fix. Real source clean.
+    c25:
+        status: ok
+        audited_at: '2026-04-29'
+        helper: src/protolib/test/core/gov/helpers/c25.py
+        thresholds: {}
+        notes: |-
+            Phase 3 (regex). Detects `^\s+(import|from)` lines inside def
+            bodies. Suppressible at module scope via governance_exceptions: c25.
+            Fires 1 real warn at app/protopy.py (legitimate local import inside
+            method body — open as Phase 8 source-side question, not helper bug).
+    c26:
+        status: ok
+        audited_at: '2026-04-29'
+        helper: src/protolib/test/core/gov/helpers/c26.py
+        thresholds: {}
+        notes: |-
+            Phase 3 (regex). Detects `from \.` and `from \.\.` patterns.
+            Mandatory-fix. Real source clean.
+    c27:
+        status: ok
+        audited_at: '2026-04-29'
+        helper: src/protolib/test/core/gov/helpers/c27.py
+        thresholds: {}
+        notes: |-
+            Phase 3 (regex). Detects `from X import \*` patterns. Mandatory-fix.
+            Real source clean.
+    c28:
+        status: ok
+        audited_at: '2026-04-29'
+        helper: src/protolib/test/core/gov/helpers/c28.py
+        thresholds: {}
+        notes: |-
+            Phase 3 (regex). Detects `^\s*except\s*:` (bare except).
+            Mandatory-fix. Real source clean.
+    c29:
+        status: ok
+        audited_at: '2026-04-29'
+        helper: src/protolib/test/core/gov/helpers/c29.py
+        thresholds: {}
+        notes: |-
+            Phase 3 (regex). Walks AST for Constant nodes containing `^/`-
+            prefixed string literals. Suppressible at def scope. Real source
+            clean.
+    c30:
+        status: ok
+        audited_at: '2026-04-29'
+        helper: src/protolib/test/core/gov/helpers/c30.py
+        thresholds: {exempt_paths: ['/apis/', 'creator/', 'helpers/printing.py']}
+        notes: |-
+            Phase 3 (regex). Detects `print(` calls outside exempt_paths.
+            Suppressible at def scope. Real source clean.
+    c32:
+        status: ok
+        audited_at: '2026-04-29'
+        helper: src/protolib/test/core/gov/helpers/c32.py
+        thresholds: {allowed_paths: ['helpers/printing.py']}
+        notes: |-
+            Phase 5. Detects `import logging` outside allowed_paths. Mandatory-
+            fix. Real source clean.
+    c34:
+        status: ok
+        audited_at: '2026-04-29'
+        helper: src/protolib/test/core/gov/helpers/c34.py
+        thresholds: {canonical_path: 'helpers/printing.py'}
+        notes: |-
+            Phase 5. Single-source-of-truth check for `def strip_ansi_codes`.
+            Suppressible at module scope. Real source clean.
+    c35:
+        status: ok
+        audited_at: '2026-04-29'
+        helper: src/protolib/test/core/gov/helpers/c35.py
+        thresholds: {scope_prefix: 'core/', pkg: 'protolib'}
+        notes: |-
+            Phase 4 (PKG-aware). Architectural boundary: core/ files cannot
+            import protolib.app. Mandatory-fix. PKG threaded for clones. Real
+            source clean.
+    c40:
+        status: ok
+        audited_at: '2026-04-29'
+        helper: src/protolib/test/core/gov/helpers/c40.py
+        thresholds: {scope_prefix: 'helpers/', app_settings_attr: 'settings', pkg: 'protolib'}
+        notes: |-
+            Phase 4 (PKG-aware). helpers/ may not import core/ or app/, except
+            app.settings (configurable). Mandatory-fix. Real source clean.
+    c41:
+        status: ok
+        audited_at: '2026-04-29'
+        helper: src/protolib/test/core/gov/helpers/c41.py
+        thresholds: {}
+        notes: |-
+            Phase 6 (cross-file). Detects duplicate basenames across SRC_ROOT.
+            After 2026-04-29 suppression-filter wire-in, prior 4 errors resolved
+            via module-scope exceptions in source. Real source clean.
+    c90_3:
+        status: ok
+        audited_at: '2026-04-29'
+        helper: src/protolib/test/core/gov/helpers/c90_3.py
+        thresholds: {}
+        notes: |-
+            Phase 0.5 (deferred). Meta-rule (`_KIND="meta"`) consuming
+            file_records injected by base._dispatch pass 2. For every
+            governance_exceptions: cN docstring entry, verifies cN actually
+            fired anywhere in the file. Cannot be suppressed.
+            Matcher relaxed 2026-04-29 to `bool(recs.get(ec))` after legacy
+            text-match and scope-match models both produced false positives —
+            exception scope and helper-emit scope can legitimately differ
+            (e.g. c25 module-level exception, def-level helper emit).
+unaudited:
+    list: []
+    notes: |-
+        All migrated codes audited as of 2026-04-29.
+        Legacy helpers under src/protolib/test/core/helpers/gov/ remain present
+        but unwired (Phase 9 cleanup pending).

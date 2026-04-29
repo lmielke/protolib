@@ -1,7 +1,7 @@
 """
 script_path: src/protolib/test/core/test_docstring_conformance.py
 purpose: >-
-  Pre-flight test: every protolib source module parses as canonical
+  [TO_DELETE] Pre-flight test: every protolib source module parses as canonical
   front-matter docstrings (YAML head + required keys per scope).
 update_rules: "Run on every commit. Breaks if a docstring drifts from the template."
 """

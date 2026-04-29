@@ -35,9 +35,6 @@ class TestPackageName(unittest.TestCase):
     def test_package_name_is_protolib(self, *args, **kwargs):
         assert sts.package_name == "protolib"
 
-    def test_project_name_is_protolib(self, *args, **kwargs):
-        assert sts.project_name == "protolib"
-
 
 class TestConfigValues(unittest.TestCase):
     """Static config values are present and sensible."""

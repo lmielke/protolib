@@ -1,14 +1,15 @@
 """
-script_path: src/protolib/core/auto_correct.py
+script_path: src/protolib/test/core/helpers/auto_correct.py
 
 Auto-corrects governance violations that can be safely automated.
 Run manually after test_governance.py reports fixable violations.
 Each corrector matches a test in test_governance.py by check code (c24, c26, c28).
 
-Usage: uv run python -m protolib.core.auto_correct
+Usage: uv run python -m protolib.test.core.helpers.auto_correct
 """
 import os, re, ast, yaml
 import protolib.core.settings as sts
+from protolib.helpers.docstrings import Docstring
 
 SRC_ROOT = sts.package_dir
 SCAN_SKIP_DIRS = {"test", "resources", "__pycache__"}
@@ -77,16 +78,6 @@ def correct_c28_bare_except(*args, path: str, rel: str, **kwargs) -> bool:
 
 
 # ── c_dfmt: docstring front-matter ────────────────────────────────────────────
-
-def _parse_front_matter(ds, *args, **kwargs) -> tuple:
-    """Split on first blank; parse head as YAML. Returns (meta or None, body)."""
-    if not ds: return None, ""
-    parts = ds.split("\n\n", 1)
-    head, body = parts[0], (parts[1] if len(parts) > 1 else "")
-    try: meta = yaml.safe_load(head)
-    except yaml.YAMLError: return None, ""
-    return (meta if isinstance(meta, dict) else None), (body if isinstance(meta, dict) else "")
-
 
 def _placeholder(key, rel, *args, **kwargs) -> str:
     """Placeholder value for a missing required key."""
@@ -180,7 +171,8 @@ def _format_docstring(meta, body, indent, raw, *args, **kwargs) -> str:
 
 def _dfmt_edit(expr, scope, src_bytes, src_lines, rel, *args, **kwargs):
     """Return (start, end, repl_bytes) for a docstring that needs fixing, else None."""
-    meta, body = _parse_front_matter(expr.value.value)
+    ds = Docstring(expr.value.value)
+    meta, body = ds.meta, ds.body
     if not _needs_fix(meta, scope, rel): return None
     fixed = _fix_meta(meta, scope, rel)
     indent = _indent_str(src_lines, expr.lineno)

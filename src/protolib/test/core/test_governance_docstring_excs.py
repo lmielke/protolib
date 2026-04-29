@@ -1,5 +1,6 @@
 """
 script_path: src/protolib/test/core/test_governance_docstring_excs.py
+purpose: "[TO_DELETE] Legacy IT for docstring-based exceptions; superseded by gov/."
 
 IT for Phase 3 — docstring-based governance exceptions. Exercises the
 helpers (_parse_docstring_front_matter, _enclosing_scopes,
@@ -8,8 +9,9 @@ fixture files under test/data/governance_fixtures/.
 """
 import ast, os, unittest
 import protolib.core.settings as sts
-from protolib.test.core.test_governance import (
-    CHECKS, _parse_docstring_front_matter, _enclosing_scopes,
+from protolib.test.core.helpers.gov import CHECKS
+from protolib.test.core.helpers.gov.meta import (
+    _parse_docstring_front_matter, _enclosing_scopes,
     _docstring_exceptions, _match_exception, _filter_docstring_excs,
 )
 

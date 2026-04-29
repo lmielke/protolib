@@ -1,10 +1,11 @@
 """
 script_path: src/protolib/test/core/test_governance_meta_rules.py
-purpose: "IT for c_dfmt, c_dscope, c_dorph meta-rules against synthetic fixtures."
+purpose: "[TO_DELETE] IT for c_dfmt, c_dscope, c_dorph meta-rules against synthetic fixtures."
 """
 import ast, os, unittest
-from protolib.test.core.test_governance import (
-    CHECKS, _c_dfmt_check, _c_dscope_check, _c_dorph_check, _parse_legacy,
+from protolib.test.core.helpers.gov import CHECKS
+from protolib.test.core.helpers.gov.meta import (
+    _c_dfmt_check, _c_dscope_check, _c_dorph_check, _parse_legacy,
     _docstring_nodes, _docstring_excs_safe, _rec,
 )
 

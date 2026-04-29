@@ -28,9 +28,19 @@ src/protolib/
 ├── app/            # application layer (clone owners edit here)
 ├── core/           # framework: registry, APIs, admin, creator
 ├── helpers/        # pure utilities (no app/core dependencies)
-├── test/           # integration tests (testhelper.py is a utility file, not a test; governance rules do not apply to it)
-
+├── test/           # integration tests + master governance engine (test/core/gov/)
 ```
+
+Tests: see [`src/protolib/test/Readme.md`](src/protolib/test/Readme.md).
+
+## Core vs App
+
+`core/` and `helpers/` form the shared framework that every clone inherits.
+`app/` is the clone-owned layer where features and APIs live. `proto-admin sync`
+pushes `core/` and `helpers/` from protolib to every registered clone, so edits
+in those layers propagate system-wide. Because of this, **`core/` and `helpers/`
+are not to be edited outside protolib** — changes there must be made here and
+synced out. Clone owners edit only `app/`; protolib owns the framework.
 
 ## Two Entry Points
 

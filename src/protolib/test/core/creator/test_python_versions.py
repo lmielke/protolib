@@ -4,7 +4,7 @@ purpose: "Integration tests for core/creator/python_versions.py — Python versi
 update_rules: "Append scenarios. Never remove existing tests."
 """
 import os, unittest
-import protolib.test.core.testhelper as testhelper
+import protolib.test.core.helpers as testhelper
 from protolib.core.creator.python_versions import PythonVersions
 
 

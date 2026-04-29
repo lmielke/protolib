@@ -4,7 +4,7 @@ purpose: "Integration tests for helpers/tree.py — Tree class and helpers."
 update_rules: "Append scenarios. Never remove existing tests."
 """
 import os, unittest
-import protolib.test.core.testhelper as testhelper
+import protolib.test.core.helpers as testhelper
 from protolib.helpers.tree import Tree
 import protolib.helpers.printing as pr
 

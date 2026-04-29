@@ -4,7 +4,7 @@ purpose: "Integration tests for helpers/collections.py — path, dict, text, and
 update_rules: "Append scenarios. Never remove existing tests."
 """
 import os, unittest
-import protolib.test.core.testhelper as testhelper
+import protolib.test.core.helpers as testhelper
 import protolib.helpers.collections as col
 import protolib.app.settings as sts
 

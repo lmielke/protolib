@@ -5,8 +5,6 @@ description: |-
   Orchestrates the call
   chain between argument parsing, contract validation, and API dispatch. Clone owners
   override DefaultClass.run() to customise the execution sequence.
-governance_exceptions:
-  - c25: "local import in _check_governance() — move to module top"
 """
 import importlib, sys
 
@@ -40,10 +38,12 @@ class DefaultClass:
     def _check_governance(self, *args, **kwargs):
         """
         purpose: Run the governance suite if settings.run_checks is enabled.
+        governance_exceptions:
+          - c25: "local import in _check_governance() — move to module top"
         """
         if not getattr(sts, "run_checks", False):
             return
-        from protolib.test.core.test_governance import run as check_governance
+        from protolib.test.core.gov.governance import run as check_governance
         _, errors = check_governance()
         if errors:
             sys.stderr.write(f"\n  {len(errors)} governance error(s) found.\n\n")

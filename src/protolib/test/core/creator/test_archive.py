@@ -4,7 +4,7 @@ purpose: "Integration tests for core/creator/archive.py — archive helpers."
 update_rules: "Append scenarios. Never remove existing tests."
 """
 import os, unittest
-import protolib.test.core.testhelper as testhelper
+import protolib.test.core.helpers as testhelper
 from protolib.core.creator.archive import (
     collect_ignored_dirs, custom_ignore, archive, mk_tgt_dir, prep_paths,
 )
