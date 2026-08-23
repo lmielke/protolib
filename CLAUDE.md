@@ -1,8 +1,15 @@
 ---
-script_path: /home/lars/repos/protolib/CLAUDE.md
-edit: true
-purpose: "App-tier Claude Code context for the protolib package."
-update_rules: "Clone-editable. Sync never overwrites this file."
+script_path: CLAUDE.md
+description: >-
+  Documents the agent context and clone invariants for the protolib template package. It defines
+  the self-similar clone mechanism, specifies that ignore_dirs must exclude .claude, and enforces
+  the sync boundary between user-owned app/ and shared core/ directories. Agents read it before
+  modifying protolib or its derived clones.
+tags:
+- blueprint
+- docs
+- rule
+update_rules: Clone-editable. Sync never overwrites this file.
 ---
 
 # protolib — Agent Notes

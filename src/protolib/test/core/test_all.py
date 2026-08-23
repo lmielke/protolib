@@ -1,10 +1,13 @@
 """
 script_path: src/protolib/test/core/test_all.py
-
-Orchestrates all per-module tests and writes test_results.yaml. Discovers every
-source module under app/ and core/, runs its paired test file via pytest, and
-records pass/fail/missing status with timestamps and durations. Run standalone
-with: uv run python -m protolib.test.core.test_all
+description: >-
+  Orchestrates the execution of all per-module tests and writes the aggregated results to
+  test_results.yaml. Discovers source modules under app, core, and helpers directories, then
+  runs their paired test files via pytest. Records pass, fail, or missing status with timestamps
+  and durations for each module. Serves as the standalone entry point for the full test suite.
+tags:
+- cli
+- testing
 """
 import importlib.util
 import os

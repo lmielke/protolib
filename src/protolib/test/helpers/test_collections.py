@@ -1,7 +1,15 @@
 """
 script_path: src/protolib/test/helpers/test_collections.py
-purpose: "Integration tests for helpers/collections.py — path, dict, text, and dir utilities."
-update_rules: "Append scenarios. Never remove existing tests."
+description: >-
+  Runs integration tests for protolib.helpers.collections, covering path aliasing, recursive
+  dictionary lookup, text wrapping, and directory traversal. Validates utility functions against
+  edge cases like tilde expansion, nested keys, and regex pattern matching. Consumed by the
+  protolib test suite to ensure helper stability.
+tags:
+- infra
+- parsing
+- testing
+update_rules: Append scenarios. Never remove existing tests.
 """
 import os, unittest
 import protolib.test.core.helpers as testhelper

@@ -1,7 +1,14 @@
 """
 script_path: src/protolib/test/core/apis/test_register.py
-purpose: "Integration tests for app/apis/register.py — outbound registration."
-update_rules: "Append scenarios. Never remove existing tests."
+description: >-
+  Runs integration tests for the outbound registration API in protolib. Verifies that _do_register
+  returns a structured dictionary with service identifiers and handles unreachable registry
+  endpoints gracefully. Confirms that the main entry point emits valid JSON output. Consumed
+  by the test suite to validate registration behavior.
+tags:
+- infra
+- testing
+update_rules: Append scenarios. Never remove existing tests.
 """
 import json, unittest
 from protolib.core.apis.register import _do_register, main

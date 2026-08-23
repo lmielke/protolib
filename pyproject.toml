@@ -28,6 +28,7 @@ dependencies = [
 [dependency-groups]
 dev = [
     "black",
+    "governance>=1.2.0",
     "openai",
     "pre-commit",
     "pytest",

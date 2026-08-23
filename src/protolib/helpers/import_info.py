@@ -1,10 +1,14 @@
 """
 script_path: src/protolib/helpers/import_info.py
-purpose: Analyse Python package import graphs and visualise module-level dependencies.
-description: |-
-  Parses source files with AST to extract import statements, builds a directed
-  graph, and renders it via graphviz. Used to audit coupling between modules and
-  detect unexpected cross-layer imports. Do not modify in clones.
+description: >-
+  Parses Python source files using AST to extract import statements and builds a directed
+  dependency graph. Renders the graph via graphviz with node styling based on incoming edge
+  counts. Used to audit module coupling and detect unexpected cross-layer imports within a
+  package.
+tags:
+- blueprint
+- infra
+- parsing
 """
 import ast, os, argparse
 import graphviz
@@ -45,18 +49,18 @@ class PackageInfo:
         self._add_edges(filepath, filename, *args, **kwargs)
 
     def _add_edges(self, filepath, filename, *args, **kwargs):
-        for imp, origin in self.parse_imports(filepath):
-            next_file = self.resolve_module_path_to_file(imp)
+        for imp, origin in self.parse_imports(filepath, *args, **kwargs):
+            next_file = self.resolve_module_path_to_file(imp, *args, **kwargs)
             if not next_file: continue
             nf = os.path.basename(next_file)
             self.incoming_edges[nf] = self.incoming_edges.get(nf, 0) + 1
             self.graph.edge(filename, nf, label=imp)
-            self.build_graph(next_file)
+            self.build_graph(next_file, *args, **kwargs)
 
     def finalize_graph(self, *args, **kwargs):
         max_edges = max(self.incoming_edges.values(), default=1)
         for node, count in self.incoming_edges.items():
-            fs, fc = self._node_style(node, count, max_edges)
+            fs, fc = self._node_style(node, count, max_edges, *args, **kwargs)
             self.graph.node(node, fontsize=fs, fillcolor=fc)
 
     def _node_style(self, node, count, max_edges, *args, **kwargs):
@@ -68,11 +72,11 @@ class PackageInfo:
         return fontsize, fill
 
     def create_graph(self, *args, **kwargs):
-        main_path = self.locate_file(self.main_file, self.root_dir)
+        main_path = self.locate_file(self.main_file, self.root_dir, *args, **kwargs)
         if not main_path:
             raise FileNotFoundError(f"{self.main_file} not found in {self.root_dir}")
-        self.build_graph(main_path)
-        self.finalize_graph()
+        self.build_graph(main_path, *args, **kwargs)
+        self.finalize_graph(*args, **kwargs)
         return self.graph
 
     # ---------- imports ----------
@@ -82,15 +86,15 @@ class PackageInfo:
             tree = ast.parse(f.read(), filepath)
         imports = []
         for node in ast.walk(tree):
-            self._collect_imports(node, filepath, imports)
+            self._collect_imports(node, filepath, imports, *args, **kwargs)
         return imports
 
     def _collect_imports(self, node, filepath, imports, *args, **kwargs):
         rel = os.path.relpath(filepath, self.root_dir).replace(os.sep, '.')
         if isinstance(node, ast.Import):
-            self._collect_import(node, rel, imports)
+            self._collect_import(node, rel, imports, *args, **kwargs)
         elif isinstance(node, ast.ImportFrom):
-            self._collect_from_import(node, rel, imports)
+            self._collect_from_import(node, rel, imports, *args, **kwargs)
 
     def _collect_import(self, node, rel, imports, *args, **kwargs):
         for alias in node.names:
@@ -116,7 +120,7 @@ class PackageInfo:
     def get_file_list(self, *args, **kwargs) -> list[dict]:
         result = []
         for path in sorted(self.visited_paths):
-            content = self._read_file(path)
+            content = self._read_file(path, *args, **kwargs)
             if content is not None:
                 result.append({"file_path": path, "file_content": content})
         return result
@@ -138,7 +142,7 @@ class PackageInfo:
 # ---------- entry points ----------
 
 def select_files(*args, path: str = None, cursor_pos: int = None, **kwargs) -> list[dict]:
-    ctx = DirContext(path=path, cursor_pos=cursor_pos)
+    ctx = DirContext(*args, path=path, cursor_pos=cursor_pos, **kwargs)
     if not ctx.file_name:
         return []
     pkg = PackageInfo(main_file=ctx.file_name)
@@ -157,8 +161,8 @@ def _resolve_args(*args, main_file_name="", verbose=1, **kwargs):
     params = set_params(*args, **kwargs)
     return params["main_file_name"], params.get("verbose", verbose)
 
-def main(*args, main_file_name: str = "", verbose: int = 1, **kwargs):
-    name, verb = _resolve_args(*args, main_file_name=main_file_name, verbose=verbose, **kwargs)
+def main(*args, **kwargs):
+    name, verb = _resolve_args(*args, **kwargs)
     pkg = PackageInfo(main_file=name)
     graph = pkg.create_graph()
     if verb:

@@ -1,7 +1,15 @@
 """
 script_path: src/protolib/test/core/test_registry.py
-purpose: "Integration tests for core/registry.py — registry client/host/introspector."
-update_rules: "Append scenarios. Never remove existing tests."
+description: >-
+  Runs integration tests for the core registry client, host, and introspector components.
+  Validates service discovery from cached state, file-based state persistence, and TTL-based
+  staleness detection. Exercises signature introspection logic for API metadata extraction.
+  Consumed by the test suite to verify registry behavior.
+tags:
+- infra
+- parsing
+- testing
+update_rules: Append scenarios. Never remove existing tests.
 """
 import json, os, tempfile, shutil, unittest
 from protolib.core.registry import (

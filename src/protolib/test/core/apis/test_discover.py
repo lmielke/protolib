@@ -1,7 +1,14 @@
 """
 script_path: src/protolib/test/core/apis/test_discover.py
-purpose: "Integration tests for app/apis/discover.py — service discovery API."
-update_rules: "Append scenarios. Never remove existing tests."
+description: >-
+  Runs integration tests for the service discovery API by invoking the main entry point with
+  various service identifiers. Verifies that missing IDs and unknown IDs return structured
+  JSON error responses with expected message fragments. Consumed by the test runner to validate
+  the discover module's error handling behavior.
+tags:
+- infra
+- testing
+update_rules: Append scenarios. Never remove existing tests.
 """
 import json, unittest
 from protolib.core.apis.discover import main

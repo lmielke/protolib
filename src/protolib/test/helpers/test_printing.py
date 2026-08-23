@@ -1,7 +1,14 @@
 """
 script_path: src/protolib/test/helpers/test_printing.py
-purpose: "Integration tests for helpers/printing.py — pure-function surface."
-update_rules: "Append scenarios. Never remove existing tests."
+description: >-
+  Provides integration tests for the protolib.helpers.printing module, verifying pure-function
+  behavior. Covers ANSI code removal, text unescaping, character normalization, and table
+  wrapping logic. Ensures output formatting meets expected thresholds and preserves content
+  integrity.
+tags:
+- parsing
+- testing
+update_rules: Append scenarios. Never remove existing tests.
 """
 import unittest
 import protolib.helpers.printing as pr

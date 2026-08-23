@@ -1,14 +1,18 @@
 """
 script_path: src/protolib/helpers/collections.py
-purpose: Path resolution, dict traversal, text grouping, and directory walk utilities.
-description: |-
-  Stateless utility functions shared across the protolib framework.
-  Provides path alias expansion, recursive dict search, text wrapping
-  for tabular display, directory ignore-pattern collection, and file
-  lookup within the project tree.
-update_rules: Do not modify in clones.
+description: >-
+  Provides stateless utility functions for path resolution, dictionary traversal, and text
+  formatting within the protolib framework. Expands path aliases and resolves relative segments
+  against the current working directory. Recursively searches nested dictionaries and wraps
+  text for tabular display. Consumed by framework modules requiring standardized file lookup
+  and data inspection.
+tags:
+- cli
+- infra
+- parsing
 governance_exceptions:
-  - c8: "no class definition — verify OOP intent"
+- c8: no class definition — verify OOP intent
+update_rules: Do not modify in clones.
 """
 import os, re, textwrap, yaml
 from pathlib import Path
@@ -40,7 +44,7 @@ def unalias_path(wp:str, *args, **kwargs):
 
 def prep_path(wp:str, *args, **kwargs):
     """
-    purpose: Resolve path aliases and try common extensions if file not found.
+    description: Resolve path aliases and try common extensions if file not found.
     """
     wp = unalias_path(wp, *args, **kwargs)
     if os.path.exists(wp): return wp
@@ -52,7 +56,7 @@ def prep_path(wp:str, *args, **kwargs):
 
 def find_dict_entry(d, matcher, *args, **kwargs):
     """
-    purpose: Recursively search nested dict for a key matching matcher.
+    description: Recursively search nested dict for a key matching matcher.
     """
     for k, v in d.items():
         if k == matcher: return {k: v}
@@ -63,7 +67,7 @@ def find_dict_entry(d, matcher, *args, **kwargs):
 
 def group_text(text, charLen, *args, **kwargs):
     """
-    purpose: Wrap text or list of strings to charLen width.
+    description: Wrap text or list of strings to charLen width.
     """
     if not text:
         return "None"
@@ -75,7 +79,7 @@ def group_text(text, charLen, *args, **kwargs):
 
 def collect_ignored_dirs(source, ignore_dirs, *args, **kwargs):
     """
-    purpose: Walk source tree collecting dirs that match any regex in ignore_dirs.
+    description: Walk source tree collecting dirs that match any regex in ignore_dirs.
     """
     regexs = [re.compile(d) for d in ignore_dirs]
     paths = (os.path.join(r, d).replace(os.sep, '/')
@@ -85,7 +89,7 @@ def collect_ignored_dirs(source, ignore_dirs, *args, **kwargs):
 @contextmanager
 def temp_chdir(target_dir, *args, **kwargs):
     """
-    purpose: 'Context manager: temporarily change cwd, restore on exit.'
+    description: 'Context manager: temporarily change cwd, restore on exit.'
     """
     original_dir = os.getcwd()
     try:
@@ -96,7 +100,7 @@ def temp_chdir(target_dir, *args, **kwargs):
 
 def _is_ignored_dir(name, *args, **kwargs):
     """
-    purpose: Check if directory name matches any pattern in sts.ignore_dirs.
+    description: Check if directory name matches any pattern in sts.ignore_dirs.
     """
     name = name.strip()
     return any(name == i or name.endswith(i.strip('*')) for i in sts.ignore_dirs)
@@ -104,34 +108,49 @@ def _is_ignored_dir(name, *args, **kwargs):
 def _walk_for_file(file_name, pr_dir, max_depth, *args, **kwargs):
     root_depth = pr_dir.count(os.sep)
     for root, dirs, files in os.walk(pr_dir, topdown=True):
-        if _should_skip_dir(root=root, dirs=dirs, root_depth=root_depth, max_depth=max_depth):
+        depth_exceeded = root.count(os.sep) - root_depth >= max_depth
+        if _should_skip_dir(*args, root=root, dirs=dirs, depth_exceeded=depth_exceeded, **kwargs):
             continue
         if file_name in files: return os.path.join(root, file_name)
-        dirs[:] = [d for d in dirs if not _is_ignored_dir(d)]
+        dirs[:] = [d for d in dirs if not _is_ignored_dir(d, *args, **kwargs)]
     return None
 
-def _should_skip_dir(*args, root, dirs, root_depth, max_depth, **kwargs):
-    depth_exceeded = root.count(os.sep) - root_depth >= max_depth
-    if _is_ignored_dir(os.path.basename(root)) or depth_exceeded:
+def _should_skip_dir(*args, root, dirs, depth_exceeded, **kwargs):
+    if _is_ignored_dir(os.path.basename(root), *args, **kwargs) or depth_exceeded:
         dirs.clear()
         return True
     return False
 
 def _find_file_path(raw_path=None, *args, project_dir=None, max_depth=5, **kwargs):
     """
-    purpose: Locate a file by name within the project tree.
+    description: Locate a file by name within the project tree.
     """
     if not raw_path:
         return None
     pr_dir = project_dir or sts.project_dir
-    return _walk_for_file(os.path.basename(raw_path), pr_dir, max_depth)
+    return _walk_for_file(os.path.basename(raw_path), pr_dir, max_depth, *args, **kwargs)
 
-_DS_SCHEMA = Path(__file__).parent.parent / 'core' / 'resources' / 'docstring_templates.yml'
+_DS_SCHEMA = Path('~/.governance/docstring_templates.yml').expanduser()
+
+def _validate_ds_scope(*args, scope, v, **kwargs):
+    """
+    description: Validate one docstring schema scope; raise ValueError naming scope on drift.
+    """
+    if not isinstance(v, dict):
+        raise ValueError(f"scope {scope!r}: expected dict, got {type(v).__name__}")
+    if not isinstance(v.get('required'), dict):
+        raise ValueError(f"scope {scope!r}: 'required' must be a dict")
+    opt = v.get('optional')
+    if opt is not None and not isinstance(opt, dict):
+        raise ValueError(f"scope {scope!r}: 'optional' must be a dict or null")
 
 def load_docstring_schema(*args, **kwargs) -> dict:
     """
-    purpose: Load allowed and required docstring keys per scope from the canonical YAML.
+    description: Load allowed and required docstring keys per scope from the canonical YAML.
     """
     raw = yaml.safe_load(_DS_SCHEMA.read_text())
-    return {s: {'allowed': set(v['required']) | set(v.get('optional', {})),
+    if not isinstance(raw, dict):
+        raise ValueError(f"docstring schema {_DS_SCHEMA}: expected top-level dict, got {type(raw).__name__}")
+    for scope, v in raw.items(): _validate_ds_scope(*args, scope=scope, v=v, **kwargs)
+    return {s: {'allowed': set(v['required']) | set(v.get('optional') or {}),
                 'required': set(v['required'])} for s, v in raw.items()}

@@ -1,13 +1,16 @@
 """
 script_path: src/protolib/app/arguments.py
-purpose: Parse protolib CLI arguments.
-description: |-
-  Call mk_args() to get a Namespace, then
-  convert to dict via .__dict__. Avoid reusing existing arguments for
-  unrelated purposes — add a new argument instead.
+description: >-
+  Defines the protolib CLI argument schema and parsing logic using argparse. Exposes mk_args()
+  to return a Namespace object that callers convert to a dictionary. Maintains a strict separation
+  between positional and optional flags, including project setup, server configuration, and
+  service discovery parameters.
+tags:
+- cli
+- parsing
+- settings
 governance_exceptions:
-  - c8: "no class definition — verify OOP intent"
-  - c41: "duplicate basename at app/arguments.py, core/arguments.py"
+- c8: no class definition — verify OOP intent
 """
 import argparse, sys
 

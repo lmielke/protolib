@@ -1,24 +1,23 @@
 """
 script_path: src/protolib/core/apis/expose_api.py
-purpose: >-
-  Returns this package's full API signatures as JSON, including parameter names, types,
-  and docstrings.
-description: |-
-  Always active — every protolib package is self-documenting
-  by design. Consumed by the registry and by client packages discovering available
-  operations via proto discover or direct HTTP.
-  Usage:
-      proto expose_api
-      curl http://localhost:9001/expose_api/
+description: >-
+  Exposes the package's full API signatures as formatted JSON, including parameter names,
+  types, and docstrings. Uses ApiIntrospector to gather service metadata and serializes the
+  result for direct output. Serves as the self-documenting endpoint consumed by the registry
+  and client packages during discovery via CLI or HTTP.
+tags:
+- cli
+- infra
+- parsing
 governance_exceptions:
-  - c8: "no class definition — verify OOP intent"
+- c8: no class definition — verify OOP intent
 """
 import json
 from protolib.core.registry import ApiIntrospector
 
 def main(*args, **kwargs) -> str:
     """
-    purpose: Return this package's API signatures as JSON.
+    description: Return this package's API signatures as JSON.
     """
     introspector = ApiIntrospector(*args, **kwargs)
     info = introspector.get_service_info(*args, **kwargs)

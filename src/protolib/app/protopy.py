@@ -1,17 +1,20 @@
 """
 script_path: src/protolib/app/protopy.py
-purpose: Application object for protolib and all cloned packages.
-description: |-
-  Orchestrates the call
-  chain between argument parsing, contract validation, and API dispatch. Clone owners
-  override DefaultClass.run() to customise the execution sequence.
+description: >-
+  Orchestrates the call chain between argument parsing, contract validation, and API dispatch
+  for protolib and cloned packages. Instantiates DefaultClass to execute the run sequence,
+  where clone owners override the method to customise behavior. The dispatch mechanism resolves
+  API names against configured packages and imports the matching module for execution.
+tags:
+- cli
+- infra
+- parsing
 """
-import importlib, sys
+import importlib
 
-import protolib.app.settings as sts
 import protolib.core.settings as core_sts
 import protolib.app.arguments as arguments
-import protolib.app.contracts as contracts
+from protolib.app.contracts import Contracts as _Contracts
 
 
 class DefaultClass:
@@ -30,28 +33,13 @@ class DefaultClass:
         return f"DefaultClass: {self.pg_name = }"
 
     def run(self, *args, **kwargs):
-        self._check_governance(*args, **kwargs)
         kw = arguments.mk_args().__dict__
-        kw = contracts.checks(*args, **kw)
-        self._dispatch(*args, **kw)
-
-    def _check_governance(self, *args, **kwargs):
-        """
-        purpose: Run the governance suite if settings.run_checks is enabled.
-        governance_exceptions:
-          - c25: "local import in _check_governance() — move to module top"
-        """
-        if not getattr(sts, "run_checks", False):
-            return
-        from protolib.test.core.gov.governance import run as check_governance
-        _, errors = check_governance()
-        if errors:
-            sys.stderr.write(f"\n  {len(errors)} governance error(s) found.\n\n")
+        self._dispatch(*args, **_Contracts().checks(*args, **kw), **kwargs)
 
     def _dispatch(self, *args, api: str = "help", **kwargs):
         if api == "help":
             return
-        mod = _import_api(api)
+        mod = _import_api(api, *args, **kwargs)
         mod.main(*args, **kwargs)
 
 def _import_api(name: str, *args, **kwargs):
@@ -64,9 +52,9 @@ def _import_api(name: str, *args, **kwargs):
 
 def main(*args, **kwargs):
     """
-    purpose: Entry point for `proto` console script.
+    description: Entry point for `proto` console script.
     """
-    DefaultClass().run(*args, **kwargs)
+    DefaultClass(*args, **kwargs).run(*args, **kwargs)
 
 
 if __name__ == "__main__":

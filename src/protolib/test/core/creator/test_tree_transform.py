@@ -1,7 +1,15 @@
 """
 script_path: src/protolib/test/core/creator/test_tree_transform.py
-purpose: "Integration tests for core/creator/tree_transform.py — tree transformations."
-update_rules: "Append scenarios. Never remove existing tests."
+description: >-
+  Runs integration tests for the TreeTransformer class, verifying file and directory renaming,
+  regex-based removal, and text replacement logic. Validates that mapping rules correctly
+  rename entities while skipping null values or non-matching names. Confirms that pyproject.toml
+  version updates and marked line removals behave as expected. Consumed by the protolib test
+  suite to ensure core creator transformations remain stable.
+tags:
+- parsing
+- testing
+update_rules: Append scenarios. Never remove existing tests.
 """
 import os, unittest
 import protolib.test.core.helpers as testhelper

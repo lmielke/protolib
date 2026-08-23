@@ -1,14 +1,17 @@
 """
 script_path: src/protolib/app/settings.py
-purpose: App-layer configuration for protolib and all cloned packages.
-description: |-
-  Derives paths
-  from __file__ (Django-style) so they stay valid after clone. User overrides are
-  loaded from ~/.protolib/settings.yml and merged at import time, allowing per-host
-  customisation without touching the source tree.
+description: >-
+  Derives filesystem paths from the module location to remain valid after cloning. Loads user
+  overrides from a YAML file in the home directory and merges them into the module namespace
+  at import time. Provides configuration constants for ports, registry endpoints, and directory
+  exclusions consumed by the Cloner and introspection tools.
+tags:
+- infra
+- parsing
+- settings
 governance_exceptions:
-  - c8: "no class definition — verify OOP intent"
-  - c41: "duplicate basename at app/settings.py, core/settings.py"
+- c8: no class definition — verify OOP intent
+- c41: duplicate basename at app/settings.py, core/settings.py
 """
 import os, re, yaml
 from datetime import datetime as dt
@@ -57,10 +60,9 @@ user_settings_path = os.path.join(resources_dir, user_settings_name)
 _DEFAULT_SETTINGS = {
     'package_name': package_name, 'port': 9001,
     'registry_host_enabled': False,
-    'registry_heartbeat_interval': 60, 'run_checks': False,
+    'registry_heartbeat_interval': 60,
 }
 
-run_checks = False
 
 registry_port = int(os.environ.get("REGISTRY_PORT", 9000))
 service_host = os.environ.get("SERVICE_HOST", "127.0.0.1")
@@ -80,7 +82,7 @@ def _ensure_user_settings(*args, **kwargs):
 
 def load_user_settings(*args, **kwargs) -> dict:
     """
-    purpose: Load user settings from the YAML file.
+    description: Load user settings from the YAML file.
     """
     with open(user_settings_path, 'r') as f:
         return yaml.safe_load(f) or {}

@@ -1,8 +1,15 @@
 ---
-script_path: /home/lars/repos/protolib/.claude/rules/code_refactor.md
-purpose: "Refactor discipline for dead/unused code — reference-find workflow, safe renames, flag-before-delete, and minimal-context working rule."
-description: "Applied during code-cleanup passes. Emphasises high-entropy search terms, scoped find commands, and preview-before-apply renames so broken references are caught before anything is deleted. Used by architect-implementer when structural moves are required."
-update_rules: "Update requires explicit approval."
+script_path: .claude/rules/code_refactor.md
+description: >-
+  Defines the discipline for removing dead code and performing safe renames in the protolib
+  repository. It mandates high-entropy search terms, scoped find commands, and preview-before-apply
+  workflows to catch broken references. Agents apply these rules during cleanup passes to
+  ensure minimal context usage and safe structural moves.
+tags:
+- cli
+- refactor
+- rule
+update_rules: Update requires explicit approval.
 ---
 
 # Refactor

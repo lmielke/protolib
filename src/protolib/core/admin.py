@@ -1,29 +1,31 @@
 """
 script_path: src/protolib/core/admin.py
-purpose: Admin CLI entry point for the protolib framework.
-description: |-
-  Dispatches `proto-admin
-  <command>` to the correct core creator module (clone or sync). Kept strictly
-  separate from the application-level `proto` entry point (app/protopy.py) so
-  that framework operations remain available even in heavily customised clones.
+description: >-
+  Dispatches proto-admin subcommands to the correct core creator module, routing clone and
+  sync operations. Maintains strict separation from the application-level proto entry point
+  to ensure framework operations remain available in customized clones. Consumed by the proto-admin
+  console script entry point.
+tags:
+- cli
+- infra
 """
 import sys
 
-from protolib.core import arguments as admin_args
+from protolib.core import admin_args
 from protolib.core.creator.clone import main as clone_main
 from protolib.core.creator.sync import main as sync_main
 
 
 class AdminDispatcher:
     """
-    purpose: Routes admin subcommands to their implementation modules.
+    description: Routes admin subcommands to their implementation modules.
     """
 
     def __init__(self, *args, **kwargs):
         pass
 
-    def dispatch(self, *args, command: str, **kwargs):
-        handler = self._handler(command=command)
+    def dispatch(self, *args, **kwargs):
+        handler = self._handler(*args, **kwargs)
         handler(*args, **kwargs)
 
     def _handler(self, *args, command: str, **kwargs):
@@ -43,9 +45,9 @@ class AdminDispatcher:
 
 def main(*args, **kwargs):
     """
-    purpose: Entry point for `proto-admin` console script.
+    description: Entry point for `proto-admin` console script.
     """
-    ns = admin_args.mk_args()
+    ns = admin_args.mk_args(*args, **kwargs)
     AdminDispatcher().dispatch(**vars(ns))
 
 

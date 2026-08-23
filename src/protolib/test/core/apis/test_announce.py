@@ -1,7 +1,14 @@
 """
 script_path: src/protolib/test/core/apis/test_announce.py
-purpose: "Integration tests for app/apis/announce.py — registry host endpoint."
-update_rules: "Append scenarios. Never remove existing tests."
+description: >-
+  Runs integration tests for the registry host endpoint defined in app/apis/announce.py. Validates
+  service registration logic and the dormant state when the host is disabled. Uses temporary
+  directories to isolate state file mutations during test execution.
+tags:
+- infra
+- settings
+- testing
+update_rules: Append scenarios. Never remove existing tests.
 """
 import json, os, shutil, tempfile, unittest
 import protolib.core.settings as core_sts

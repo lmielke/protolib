@@ -1,54 +1,53 @@
 ---
 name: build-ar
-description: "Use when a blueprint's architecture steps are approved and need execution -- file creates, moves, ref rewrites, UAT/EtE scripts. Triggers: 'execute the architecture plan', 'move the files per blueprint', 'build the structure'. Closes with green suite."
+description: "Execute the ARCHITECTURE steps of an approved blueprint -- create the package skeleton, files, imports, OOP scaffolding, and UAT/EtE test stubs, closing with a green suite. Use when the architecture plan is approved and needs to be made real: 'execute the architecture plan', 'build the structure', 'scaffold the skeleton from the blueprint', 'set up the files and imports'. This builds structure only, not module logic -- once skeletons exist, build-co fills their bodies. Writing the plan rather than executing it is design-ar; cloning a brand-new package from scratch is clone."
 argument-hint: "[project] [bp-path]"
 allowed-tools: Read, Write, Edit, Glob, Grep, Bash
 ---
 
 # Purpose
-Architecture execution leaf. Performs the structural moves listed as
-`[open]` in the implementation plan's §Architecture steps, and writes the
-host-level UAT/EtE scripts listed under §Test Coverage (UAT/EtE). Refactor
-discipline applies — find references first, then move. Runs inline —
-aggregates typically run this inside a `worker` subagent.
+OOP Architecture execution leaf. Performs the structural moves listed as
+`[open]` in the implementation plan's OOP §Architecture steps (crate skeleton), and writes the
+host-level UAT/EtE scripts listed under §Test Coverage (UAT/EtE). Runs inline —
+aggregates typically run this inside a `detective` subagent.
 
-# Rule set
+# Expected Results / Deliverables
+- populated package directory tree including module dirs, resource dirs (use dfeaults), test dirs
+- all relevant module files with per module OOP skeletons
+- governance test modules skeletons for every model to be written 
+
+# Mandatory rule set
 Execute steps against the implementation plan:
-@rules/bp_plan.md
+@rules/bp_implementation_plan.md
 
-Refactor discipline — find-refs-first, minimal change:
-@rules/code_refactor.md
 
 Package architecture placement (abstract base + Python specialization):
 @rules/architecture.md
 @rules/architecture_python.md
 
-TDD + host-level UAT/EtE scripts:
-@rules/tdd.md
+TDD + host-level UAT/EtE mandatory scripts:
 @rules/testing.md
 @rules/testing_project.md
-@rules/test_style.md
+@rules/test_style_python.md
 @rules/test_gov.md
 
-Preferred tools — use existing commands over manual work:
-@rules/tools.md
-
-Log any automation candidate at close:
-@rules/automation.md
+# Optional rules
+If the build contains a refactor:
+@rules/code_refactor.md
 
 # Workflow
 1. Parse `$ARGUMENTS` → `<project> <bp-path>`.
-2. Read the blueprint + implementation plan. List the `[open]`
+2. Know the blueprint + implementation plan. List the `[open]`
    §Architecture **and §Test Coverage (UAT/EtE)** steps.
-3. Execute §Architecture in order: creates → moves → ref rewrites →
-   deletes. After each step run a targeted ref sweep (`fdc`) to confirm
-   no breaks.
-4. Execute §Test Coverage (UAT/EtE): write host-level scripts under
-   `~/scripts/testing/` (or project equivalent); validate prereqs inside
-   each script; realistic inputs; independently-derived expected outputs.
-5. Mark each step `[done]` in the implementation plan as it completes.
-6. Mandatory close — run the suite green:
-   1. `uv run pytest` (or project equivalent) + any EtE scripts written.
-   2. Fix root cause on any failure; re-run.
-   3. Do not return until green.
-7. Return `MEMO: <2-3 lines>\nPATH: <bp-path>`.
+3. Know the module skeleton "mcp ### Modules - Dot" to be implemented.
+4. Execute §Architecture skeleton following @rules/code_skeleton_python.md.
+5. Execute governance tests: @rules/test_gov.md
+6. Fix and re-iterate.
+7. Spawn a design-qm:
+```
+Task(subagent_type="detective",
+     description="design-qm review of $blueprint",
+     prompt="Critically review the design-ar skeleton implementation result. Return actionable qm summary and recommendations. Stop early if any leaf returns blockers. Return the final MEMO + PATH.")
+```
+8. For each module execute revision recomendations (if in doubt, reject/skip execution step)
+9. Return `MEMO: <2-3 lines>\nPATH: <bp-path>`.

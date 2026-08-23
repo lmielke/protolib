@@ -1,6 +1,13 @@
 """
 script_path: src/protolib/test/core/creator/test_clones.py
-purpose: Integration tests for core/creator/clones.py — clone file add/remove/load.
+description: >-
+  Runs integration tests for the Clones class and _pkg_name helper in core/creator/clones.py.
+  Verifies add, remove, load, and deduplication behavior against a temporary clones.yml file.
+  Also checks package name extraction from pyproject.toml with a dirname fallback. Consumed
+  by the protolib test suite.
+tags:
+- parsing
+- testing
 """
 import shutil
 import tempfile

@@ -1,6 +1,13 @@
 """
 script_path: src/protolib/test/core/creator/test_gate.py
-purpose: "Integration tests for core/creator/gate.py — pre-flight test gate."
+description: >-
+  Runs integration tests for the core creator gate module, verifying pre-flight validation
+  logic. Checks that the gate passes on green pytest runs and aborts with exit code 2 on failures
+  or missing results. Validates that the gate invokes uv run pytest in the correct project
+  directory. Consumed by the protolib test suite to ensure gate behavior remains stable.
+tags:
+- governance
+- testing
 """
 import json
 import os
@@ -33,7 +40,7 @@ class TestGate(unittest.TestCase):
         shutil.rmtree(self.root)
 
     def _run_rc(self, rc: int, *args, **kwargs):
-        """purpose: Build a subprocess.run mock that returns the given rc."""
+        """description: Build a subprocess.run mock that returns the given rc."""
         return mock.Mock(returncode=rc)
 
     def test_gate_passes_on_green(self, *args, **kwargs):

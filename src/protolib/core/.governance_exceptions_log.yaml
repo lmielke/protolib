@@ -1,0 +1,55 @@
+generated_at: '2026-05-02T11:14:56+00:00'
+total: 10
+by_rule:
+  c8:
+  - file: apis/announce.py
+    scope: module
+    line: 1
+    node: announce.py
+    tech: "no class definition \u2014 verify OOP intent"
+  - file: apis/discover.py
+    scope: module
+    line: 1
+    node: discover.py
+    tech: "no class definition \u2014 verify OOP intent"
+  - file: apis/expose_api.py
+    scope: module
+    line: 1
+    node: expose_api.py
+    tech: "no class definition \u2014 verify OOP intent"
+  - file: apis/info.py
+    scope: module
+    line: 1
+    node: info.py
+    tech: "no class definition \u2014 verify OOP intent"
+  - file: apis/register.py
+    scope: module
+    line: 1
+    node: register.py
+    tech: "no class definition \u2014 verify OOP intent"
+  - file: arguments.py
+    scope: module
+    line: 1
+    node: arguments.py
+    tech: "no class definition \u2014 verify OOP intent"
+  - file: creator/archive.py
+    scope: module
+    line: 1
+    node: archive.py
+    tech: "no class definition \u2014 verify OOP intent"
+  - file: settings.py
+    scope: module
+    line: 1
+    node: settings.py
+    tech: "no class definition \u2014 verify OOP intent"
+  c41:
+  - file: arguments.py
+    scope: module
+    line: 1
+    node: arguments.py
+    tech: duplicate basename at app/arguments.py, core/arguments.py
+  - file: settings.py
+    scope: module
+    line: 1
+    node: settings.py
+    tech: duplicate basename at app/settings.py, core/settings.py

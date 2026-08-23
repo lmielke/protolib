@@ -1,7 +1,15 @@
 """
 script_path: src/protolib/test/app/apis/test_select_files.py
-purpose: "Integration tests for app/apis/select_files.py — import graph CLI wrapper."
-update_rules: "Append scenarios. Never remove existing tests."
+description: >-
+  Runs integration tests for the select_files CLI wrapper, verifying usage messages, output
+  formatting, and end-to-end import graph resolution. Tests cover empty file lists, JSON serialization,
+  and real file targets from the core settings module. Consumed by the protolib test suite
+  to validate the app/apis/select_files interface.
+tags:
+- cli
+- parsing
+- testing
+update_rules: Append scenarios. Never remove existing tests.
 """
 import os, unittest
 from protolib.app.apis.select_files import main, _no_target_msg, _format_output

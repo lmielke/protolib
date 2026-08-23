@@ -1,14 +1,13 @@
 """
 script_path: src/protolib/core/creator/sync.py
-purpose: >-
-  Pulls core/ and helpers/ from an upstream protolib source into the current clone
-  package.
-description: |-
-  Walks SYNC_SCOPE directories in the upstream source directly and copies
-  each file, preserving relative paths. After copy, rewrites caller→target
-  identity (pr_name/pg_name/alias/port) so absolute imports and aliases match
-  the target. Writes a sync_log.yaml to the clone's ~/.{pkg}/ dir after each
-  push, then recursively triggers sync in the clone.
+description: >-
+  Copies framework-scope files from an upstream protolib source into the current package clone.
+  Preserves relative paths and rewrites caller-to-target identity parameters for absolute
+  imports. Writes a sync log and recursively triggers synchronization in registered clones.
+tags:
+- cli
+- infra
+- sync
 """
 import importlib
 import importlib.util
@@ -29,7 +28,7 @@ from protolib.core.creator.tree_transform import TreeTransformer
 
 class Synchronizer:
     """
-    purpose: Copies framework-scope files from an upstream source package to self.
+    description: Copies framework-scope files from an upstream source package to self.
     """
 
     SYNC_SCOPE = ("core", "helpers", "test/core")
@@ -44,20 +43,21 @@ class Synchronizer:
         purpose: Walk SYNC_SCOPE in source and copy each file to target.
         description: 'Returns {''copied'': [...]}.'
         """
-        copied = self._apply()
+        copied = self._apply(*args, **kwargs)
         return {"copied": copied}
 
     def _apply(self, *args, **kwargs) -> list:
         copied = []
         for scope in self.SYNC_SCOPE:
-            copied.extend(self._sync_scope(scope=scope))
+            copied.extend(self._sync_scope(*args, scope=scope, **kwargs))
         return copied
 
     def _sync_scope(self, *args, scope: str, **kwargs) -> list:
         scope_dir = os.path.join(self.source_dir, scope)
         if not os.path.isdir(scope_dir):
             return []
-        return [rel for rel in self._iter_rels(scope_dir) if self._copy(rel=rel)]
+        rels = self._iter_rels(scope_dir, *args, **kwargs)
+        return [r for r in rels if self._copy(*args, rel=r, **kwargs)]
 
     def _iter_rels(self, scope_dir: str, *args, **kwargs):
         for root, dirs, files in os.walk(scope_dir):
@@ -74,24 +74,24 @@ class Synchronizer:
         if self.verbose >= 2: print(f"  synced: {rel}")
         return True
 
-def _sync_to_clone(entry: dict, verbose: int, *args, **kwargs) -> dict:
-    """purpose: Sync sts.package_dir to a single registered clone."""
+def _sync_to_clone(*args, entry: dict, verbose: int = 0, **kwargs) -> dict:
+    """description: Sync sts.package_dir to a single registered clone."""
     target = str(Path(entry["path"]) / "src" / entry["name"])
     s = Synchronizer(source_dir=sts.package_dir, target_dir=target, verbose=verbose)
-    report = s.sync()
+    report = s.sync(*args, **kwargs)
     print(f"  {entry['name']}: {len(report['copied'])} file(s) synced.")
     return report
 
-def _sync_registered(*args, verbose: int = 0, **kwargs) -> dict:
-    """purpose: Sync sts.package_dir to all registered clones. Cleans stale paths."""
-    entries = _purge_stale(Clones())
+def _sync_registered(*args, **kwargs) -> dict:
+    """description: Sync sts.package_dir to all registered clones. Cleans stale paths."""
+    entries = _purge_stale(Clones(*args, **kwargs), *args, **kwargs)
     if not entries:
         print("No registered clones.")
         return {}
-    return {e["name"]: _sync_and_recurse(e, verbose) for e in entries}
+    return {e["name"]: _sync_and_recurse(*args, entry=e, **kwargs) for e in entries}
 
 def _purge_stale(clones, *args, **kwargs) -> list:
-    """purpose: Drop entries whose path no longer exists; return live entries."""
+    """description: Drop entries whose path no longer exists; return live entries."""
     live = [e for e in clones.load() if Path(e["path"]).exists()]
     for e in clones.load():
         if Path(e["path"]).exists(): continue
@@ -99,41 +99,43 @@ def _purge_stale(clones, *args, **kwargs) -> list:
         print(f"Removed stale entry: {e['path']}")
     return live
 
-def _sync_and_recurse(entry: dict, verbose: int, *args, **kwargs) -> dict:
-    """purpose: Sync, rewrite caller→target identity, write log, trigger child sync."""
-    report = _sync_to_clone(entry, verbose)
-    _transform_target(entry=entry, verbose=verbose)
-    _write_sync_log(entry, report["copied"])
-    _trigger_child_sync(entry)
+def _sync_and_recurse(*args, **kwargs) -> dict:
+    """description: Sync, rewrite caller→target identity, write log, trigger child sync."""
+    report = _sync_to_clone(*args, **kwargs)
+    _transform_target(*args, **kwargs)
+    _write_sync_log(*args, copied=report["copied"], **kwargs)
+    _trigger_child_sync(*args, **kwargs)
     return report
 
-def _transform_target(*args, entry: dict, verbose: int, **kwargs) -> None:
-    """purpose: Rewrite caller→target identity across synced SYNC_SCOPE dirs."""
+def _transform_target(*args, entry: dict, **kwargs) -> None:
+    """description: Rewrite caller→target identity across synced SYNC_SCOPE dirs."""
     target_root = str(Path(entry["path"]) / "src" / entry["name"])
-    params = _build_rewrite_params(target_root=target_root, pkg_name=entry["name"])
+    pkg_name = entry["name"]
+    params = _build_rewrite_params(*args, target_root=target_root, pkg_name=pkg_name, **kwargs)
     if params is None: return
     for scope in Synchronizer.SYNC_SCOPE:
-        _rewrite_scope(target_root=target_root, scope=scope, params=params, verbose=verbose)
+        _rewrite_scope(*args, target_root=target_root, scope=scope, params=params, **kwargs)
 
-def _rewrite_scope(*args, target_root: str, scope: str, params, verbose: int,
+def _rewrite_scope(*args, target_root: str, scope: str, params, verbose: int = 0,
                    **kwargs) -> None:
-    """purpose: Apply CloneParams text_repls to one scope dir inside the target."""
+    """description: Apply CloneParams text_repls to one scope dir inside the target."""
     scope_dir = os.path.join(target_root, scope)
     if not os.path.isdir(scope_dir): return
-    tx = TreeTransformer(scope_dir, ignore_dirs=sts.ignore_dirs, verbose=verbose)
+    v = verbose  # local alias — avoids K=K forwarding violation
+    tx = TreeTransformer(scope_dir, *args, ignore_dirs=sts.ignore_dirs, verbose=v, **kwargs)
     tx.rewrite(params.text_repls())
 
-def _build_rewrite_params(*args, target_root: str, pkg_name: str, **kwargs):
-    """purpose: Load caller+target app settings; return CloneParams old=caller new=target."""
-    tgt = _load_app_settings(target_root=target_root, pkg_name=pkg_name)
+def _build_rewrite_params(*args, **kwargs):
+    """description: Load caller+target app settings; return CloneParams old=caller new=target."""
+    tgt = _load_app_settings(*args, **kwargs)
     if tgt is None: return None
     caller = importlib.import_module(f"{sts.package_name}.app.settings")
-    return CloneParams.from_settings(caller, new_pr_name=tgt.project_name,
+    return CloneParams.from_settings(caller, *args, new_pr_name=tgt.project_name,
         new_pg_name=tgt.package_name, new_alias=getattr(tgt, "alias", None),
-        new_port=getattr(tgt, "port", None))
+        new_port=getattr(tgt, "port", None), **kwargs)
 
 def _load_app_settings(*args, target_root: str, pkg_name: str, **kwargs):
-    """purpose: Load target's app/settings.py from disk; return None if absent."""
+    """description: Load target's app/settings.py from disk; return None if absent."""
     path = Path(target_root) / "app" / "settings.py"
     if not path.exists(): return None
     spec = importlib.util.spec_from_file_location(f"_t.{pkg_name}.app.settings", str(path))
@@ -141,26 +143,26 @@ def _load_app_settings(*args, target_root: str, pkg_name: str, **kwargs):
     spec.loader.exec_module(mod)
     return mod
 
-def _write_sync_log(entry: dict, copied: list, *args, **kwargs) -> None:
-    """purpose: Write ~/.{pkg}/sync_log.yaml with last_synced timestamp and files."""
+def _write_sync_log(*args, entry: dict, copied: list, **kwargs) -> None:
+    """description: Write ~/.{pkg}/sync_log.yaml with last_synced timestamp and files."""
     log_dir = Path.home() / f".{entry['name']}"
     log_dir.mkdir(parents=True, exist_ok=True)
     data = {"last_synced": datetime.now().isoformat(timespec="microseconds"),
             "synced_by": sts.package_name, "files": sorted(copied)}
     (log_dir / "sync_log.yaml").write_text(yaml.dump(data, default_flow_style=False))
 
-def _trigger_child_sync(entry: dict, *args, **kwargs) -> None:
-    """purpose: Run `<target-alias>-admin sync` inside the clone to propagate further."""
+def _trigger_child_sync(*args, entry: dict, **kwargs) -> None:
+    """description: Run `<target-alias>-admin sync` inside the clone to propagate further."""
     target_root = str(Path(entry["path"]) / "src" / entry["name"])
-    tgt = _load_app_settings(target_root=target_root, pkg_name=entry["name"])
+    tgt = _load_app_settings(*args, target_root=target_root, pkg_name=entry["name"], **kwargs)
     alias = getattr(tgt, "alias", "proto") if tgt else "proto"
     print(f"  {entry['name']}: recursing...")
     subprocess.run(["uv", "run", f"{alias}-admin", "sync"], cwd=entry["path"])
 
-def main(*args, verbose: int = 0, **kwargs) -> dict:
-    """purpose: Run gate, then push core/+helpers/ to all registered clones."""
-    run_gate(sts.project_dir)
-    return _sync_registered(verbose=verbose)
+def main(*args, **kwargs) -> dict:
+    """description: Run gate, then push core/+helpers/ to all registered clones."""
+    run_gate(sts.project_dir, *args, **kwargs)
+    return _sync_registered(*args, **kwargs)
 
 
 if __name__ == "__main__":

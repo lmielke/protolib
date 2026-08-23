@@ -1,6 +1,14 @@
 """
 script_path: src/protolib/test/core/creator/test_sync.py
-purpose: "Integration tests for core/creator/sync.py — upstream-to-target framework sync."
+description: >-
+  Runs integration tests for the core creator sync module, verifying upstream-to-target file
+  propagation. Validates that scoped files like core and helpers are copied while app-specific
+  files are excluded. Tests also cover clone synchronization, log writing, and target transformation
+  logic.
+tags:
+- infra
+- staging
+- testing
 """
 import os
 import shutil
@@ -92,12 +100,12 @@ class TestSyncToClone(unittest.TestCase):
 
     def test_sync_to_clone_copies_changed_file(self, *args, **kwargs):
         (self.source / "core" / "settings.py").write_text("port = 9999\n")
-        _sync_to_clone(self.entry, verbose=0)
+        _sync_to_clone(entry=self.entry, verbose=0)
         self.assertIn("9999", (self.target / "core" / "settings.py").read_text())
 
     def test_sync_to_clone_returns_copied_list(self, *args, **kwargs):
         (self.source / "core" / "new_module.py").write_text("# new\n")
-        report = _sync_to_clone(self.entry, verbose=0)
+        report = _sync_to_clone(entry=self.entry, verbose=0)
         self.assertIn("core/new_module.py", report["copied"])
 
 
@@ -117,21 +125,21 @@ class TestWriteSyncLog(unittest.TestCase):
         shutil.rmtree(self.root)
 
     def test_sync_log_file_created(self, *args, **kwargs):
-        _write_sync_log(self.entry, ["core/settings.py"])
+        _write_sync_log(entry=self.entry, copied=["core/settings.py"])
         self.assertTrue(self.log.exists())
 
     def test_sync_log_timestamp_is_iso(self, *args, **kwargs):
-        _write_sync_log(self.entry, ["core/settings.py"])
+        _write_sync_log(entry=self.entry, copied=["core/settings.py"])
         data = yaml.safe_load(self.log.read_text())
         datetime.fromisoformat(data["last_synced"])  # raises if malformed
 
     def test_sync_log_files_sorted(self, *args, **kwargs):
-        _write_sync_log(self.entry, ["core/z.py", "core/a.py", "helpers/m.py"])
+        _write_sync_log(entry=self.entry, copied=["core/z.py", "core/a.py", "helpers/m.py"])
         data = yaml.safe_load(self.log.read_text())
         self.assertEqual(data["files"], ["core/a.py", "core/z.py", "helpers/m.py"])
 
     def test_sync_log_synced_by_source(self, *args, **kwargs):
-        _write_sync_log(self.entry, [])
+        _write_sync_log(entry=self.entry, copied=[])
         data = yaml.safe_load(self.log.read_text())
         self.assertEqual(data["synced_by"], "protolib")
 
@@ -144,13 +152,13 @@ class TestTriggerChildSync(unittest.TestCase):
 
     def test_invokes_uv_proto_admin_sync(self, *args, **kwargs):
         with mock.patch("protolib.core.creator.sync.subprocess.run") as m:
-            _trigger_child_sync(self.entry)
+            _trigger_child_sync(entry=self.entry)
         args_, _ = m.call_args
         self.assertEqual(args_[0], ["uv", "run", "proto-admin", "sync"])
 
     def test_subprocess_cwd_is_clone_path(self, *args, **kwargs):
         with mock.patch("protolib.core.creator.sync.subprocess.run") as m:
-            _trigger_child_sync(self.entry)
+            _trigger_child_sync(entry=self.entry)
         _, kwargs_ = m.call_args
         self.assertEqual(kwargs_["cwd"], "/tmp/myclone")
 
@@ -162,7 +170,7 @@ class TestTriggerChildSync(unittest.TestCase):
             (pkg / "settings.py").write_text('alias = "tcl"\n')
             entry = {"path": str(root / "proj"), "name": "mypkg"}
             with mock.patch("protolib.core.creator.sync.subprocess.run") as m:
-                _trigger_child_sync(entry)
+                _trigger_child_sync(entry=entry)
             args_, _ = m.call_args
             self.assertEqual(args_[0], ["uv", "run", "tcl-admin", "sync"])
         finally:

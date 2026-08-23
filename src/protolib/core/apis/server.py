@@ -1,12 +1,16 @@
 """
 script_path: src/protolib/core/apis/server.py
-purpose: HTTP server for protolib and all cloned packages.
-description: |-
-  Discovers API modules from
-  core/apis/ and app/apis/ at startup and dispatches GET/POST requests to their
-  main() functions.
+description: >-
+  Serves HTTP requests for protolib and cloned packages by discovering API modules in core
+  and app directories at startup. Routes GET and POST requests to the main functions of loaded
+  modules, handling JSON responses and HTML rendering. Integrates with the registry client
+  for service announcements and heartbeat monitoring.
+tags:
+- cli
+- hook
+- infra
 """
-import http.server, json, socketserver, os, importlib
+import http.server, json, socketserver, os, importlib, re
 from urllib.parse import urlparse, parse_qs
 import io, contextlib
 from colorama import Fore, Style
@@ -22,11 +26,12 @@ _API_DIRS = [
 ]
 
 _ansi2html = Ansi2HTMLConverter(inline=True, dark_bg=True)
+_ANSI_RE = re.compile(r"\x1b\[[0-9;]*m")
 
 
 class ProtoControlHandler(http.server.SimpleHTTPRequestHandler):
     """
-    purpose: Request handler — discovers and runs available API modules.
+    description: Request handler — discovers and runs available API modules.
     """
     available_apis = {}
 
@@ -36,7 +41,7 @@ class ProtoControlHandler(http.server.SimpleHTTPRequestHandler):
     @classmethod
     def load_apis(cls, *args, **kwargs):
         """
-        purpose: Scan core/apis/ and app/apis/ directories for API modules.
+        description: Scan core/apis/ and app/apis/ directories for API modules.
         """
         cls.available_apis = {}
         skip = os.path.splitext(os.path.basename(__file__))[0]
@@ -44,36 +49,36 @@ class ProtoControlHandler(http.server.SimpleHTTPRequestHandler):
             cls._scan_dir(*args, apis_dir=apis_dir, pkg_prefix=pkg_prefix, skip=skip, **kwargs)
 
     @classmethod
-    def _scan_dir(cls, *args, apis_dir: str, pkg_prefix: str, skip: str, **kwargs):
+    def _scan_dir(cls, *args, apis_dir: str, skip: str, **kwargs):
         if not os.path.isdir(apis_dir):
             return
         for fn in os.listdir(apis_dir):
-            mod = cls._try_load_api(fn, skip, *args, pkg_prefix=pkg_prefix, **kwargs)
+            mod = cls._try_load_api(fn, skip, *args, **kwargs)
             if mod:
                 cls.available_apis[mod[0]] = mod[1]
 
     @classmethod
-    def _try_load_api(cls, filename: str, skip: str, *args, pkg_prefix: str, **kwargs):
+    def _try_load_api(cls, filename: str, skip: str, *args, **kwargs):
         if not filename.endswith(".py") or filename.startswith(("_", "#")):
             return None
         name = os.path.splitext(filename)[0]
         if name == skip:
             return None
-        return cls._import_api(name, *args, pkg_prefix=pkg_prefix, **kwargs)
+        return cls._import_api(name, *args, **kwargs)
 
     @classmethod
     def _import_api(cls, name: str, *args, pkg_prefix: str, **kwargs):
         try: mod = importlib.import_module(f"{pkg_prefix}.{name}")
         except Exception as e:
-            logprint(f"Failed to load API '{name}': {e}", level="error")
+            logprint(f"Failed to load API '{name}': {e}", *args, level="error", **kwargs)
             return None
         if not hasattr(mod, "main"): return None
-        logprint(f"Loaded API: '{name}'")
+        logprint(f"Loaded API: '{name}'", *args, **kwargs)
         return name, mod
 
     def do_GET(self, *args, **kwargs):
         """
-        purpose: Route GET to matching API or list available APIs.
+        description: Route GET to matching API or list available APIs.
         """
         parsed = urlparse(self.path)
         api_name = parsed.path.strip("/")
@@ -90,7 +95,7 @@ class ProtoControlHandler(http.server.SimpleHTTPRequestHandler):
             self._send_ok_response(resp, *args, **kwargs)
         except Exception as e:
             self.send_error(500, f"Error executing API '{name}': {e}")
-            logprint(f"Failed API '{name}': {e}", level="error")
+            logprint(f"Failed API '{name}': {e}", *args, level="error", **kwargs)
 
     def _list_apis(self, api_name, *args, **kwargs):
         apis = list(self.available_apis.keys())
@@ -101,7 +106,7 @@ class ProtoControlHandler(http.server.SimpleHTTPRequestHandler):
 
     def do_POST(self, *args, **kwargs):
         """
-        purpose: Route POST /announce to registry handler.
+        description: Route POST /announce to registry handler.
         """
         parsed = urlparse(self.path)
         api_name = parsed.path.strip("/")
@@ -115,12 +120,12 @@ class ProtoControlHandler(http.server.SimpleHTTPRequestHandler):
             self._dispatch_announce(*args, **kwargs)
         except Exception as e:
             self.send_error(500, f"POST /announce error: {e}")
-            logprint(f"POST /announce error: {e}", level="error")
+            logprint(f"POST /announce error: {e}", *args, level="error", **kwargs)
 
     def _dispatch_announce(self, *args, **kwargs):
         body = self._read_body(*args, **kwargs)
         if not getattr(sts, 'registry_host_enabled', False):
-            self._send_json_response({"error": "not enabled"}, 403)
+            self._send_json_response({"error": "not enabled"}, 403, *args, **kwargs)
             return
         state = _handle_registration(body, *args, **kwargs)
         self._send_json_response(state, 200, *args, **kwargs)
@@ -131,55 +136,87 @@ class ProtoControlHandler(http.server.SimpleHTTPRequestHandler):
 
     def _send_json_response(self, data: dict, code: int, *args, **kwargs):
         """
-        purpose: Send a JSON response.
+        description: Send a JSON response.
         """
         response = json.dumps(data, indent=2)
         self.send_response(code)
         self.send_header("Content-Type", "application/json")
         self.end_headers()
         self.wfile.write(response.encode("utf-8"))
+        return
 
-    def _run_api(self, *args, api_module, params: dict, **kwargs) -> str:
+    def _run_api(self, *args, api_module, params: dict, **kwargs):
         """
-        purpose: Run API and capture returned output.
+        description: Run API and capture returned output (str, dict, or list).
         """
         with contextlib.redirect_stdout(io.StringIO()):
             rv = api_module.main(*args, **params)
-        return rv if isinstance(rv, str) else ""
+        return rv if isinstance(rv, (str, dict, list)) else ""
 
-    def _send_ok_response(self, content: str, *args, **kwargs):
+    def _send_ok_response(self, content, *args, **kwargs):
         """
-        purpose: Send 200 OK with ANSI→HTML conversion.
+        description: Send 200 OK, negotiating JSON or ANSI→HTML output.
         """
-        html = _ansi2html.convert(content)
+        if self._negotiate(*args, **kwargs) == "json":
+            self._send_json_response(self._as_json(content, *args, **kwargs), 200, *args, **kwargs)
+        else:
+            self._send_html_response(content, *args, **kwargs)
+
+    def _negotiate(self, *args, **kwargs) -> str:
+        """
+        description: Pick output format from ?format override, else Accept header.
+        """
+        fmt = parse_qs(urlparse(self.path).query).get("format", [None])[0]
+        if fmt in ("json", "html"): return fmt
+        return "html" if "text/html" in self.headers.get("Accept", "") else "json"
+
+    def _as_json(self, content, *args, **kwargs):
+        """
+        description: Wrap API output as a JSON-serializable object.
+        """
+        if isinstance(content, (dict, list)): return content
+        return {"result": _strip_ansi(content, *args, **kwargs)}
+
+    def _send_html_response(self, content, *args, **kwargs):
+        """
+        description: Send 200 OK with ANSI→HTML conversion.
+        """
+        text = content if isinstance(content, str) else json.dumps(content, indent=2)
+        html = _ansi2html.convert(text)
         self.send_response(200)
         self.send_header("Content-type", "text/html; charset=utf-8")
         self.end_headers()
         self.wfile.write(html.encode("utf-8"))
 
-    def run_api_command(self, *args, api_module, parsed_url, **kwargs) -> str:
+    def run_api_command(self, *args, parsed_url, **kwargs):
         """
-        purpose: Parse query string, run API, return output.
+        description: Parse query string, run API, return output.
         """
         qp = parse_qs(parsed_url.query)
-        params = _build_params(qp)
-        return self._run_api(*args, api_module=api_module, params=params, **kwargs)
+        params = _build_params(qp, *args, **kwargs)
+        return self._run_api(*args, params=params, **kwargs)
 
 def _build_params(query_params: dict, *args, **kwargs) -> dict:
     """
-    purpose: Convert parsed query string dict to typed params for API dispatch.
+    description: Convert parsed query string dict to typed params for API dispatch.
     """
     result = {}
     for key, vals in query_params.items():
-        if not vals:
+        if not vals or key == "format":
             continue
-        result[key] = vals if key == "infos" else _cast_value(vals[0])
+        result[key] = vals if key == "infos" else _cast_value(vals[0], *args, **kwargs)
     result.setdefault("verbose", 0)
     return result
 
+def _strip_ansi(text: str, *args, **kwargs) -> str:
+    """
+    description: Remove ANSI color escape codes from a string.
+    """
+    return _ANSI_RE.sub("", text)
+
 def _cast_value(val: str, *args, **kwargs):
     """
-    purpose: Cast a query string value to int, bool, or str.
+    description: Cast a query string value to int, bool, or str.
     """
     if val.isdigit():
         return int(val)
@@ -192,29 +229,29 @@ def _start_heartbeat(*args, **kwargs):
         client = RegistryClient(*args, **kwargs)
         client.start_heartbeat_loop(
             *args, interval=sts.registry_heartbeat_interval, **kwargs)
-        logprint("Registry heartbeat started")
+        logprint("Registry heartbeat started", *args, **kwargs)
     except Exception:
-        logprint("Registry heartbeat not started", level="warning")
+        logprint("Registry heartbeat not started", *args, level="warning", **kwargs)
 
 def _start_sweep(*args, **kwargs):
     if not getattr(sts, 'registry_host_enabled', False):
         return
     try:
         RegistryHost(*args, **kwargs).start_sweep_loop(*args, **kwargs)
-        logprint("Registry host TTL sweep started")
+        logprint("Registry host TTL sweep started", *args, **kwargs)
     except Exception:
-        logprint("Registry host sweep not started", level="warning")
+        logprint("Registry host sweep not started", *args, level="warning", **kwargs)
 
 def _serve(port: int, handler, *args, **kwargs):
     with socketserver.TCPServer(("", port), handler) as httpd:
         msg = f"{sts.package_name} server starting on port {port}"
-        logprint(msg)
-        logprint(f"APIs: {list(handler.available_apis.keys())}")
+        logprint(msg, *args, **kwargs)
+        logprint(f"APIs: {list(handler.available_apis.keys())}", *args, **kwargs)
         httpd.serve_forever()
 
-def run_server(*args, port: int = None, verbose: int = 1, **kwargs):
+def run_server(*args, port: int = None, **kwargs):
     """
-    purpose: Set up and run the HTTP server indefinitely.
+    description: Set up and run the HTTP server indefinitely.
     """
     port = int(port) if port is not None else sts.port
     ProtoControlHandler.load_apis(*args, **kwargs)

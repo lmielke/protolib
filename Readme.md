@@ -1,10 +1,16 @@
-<!--
-source_path: /home/lars/repos/protolib/Readme.md
-edit: true
-purpose: "User-facing documentation. Explains installation, usage, and commands."
-update_rules: "Update when user-facing behaviour, commands, or parameters change."
-format: "prose + code blocks"
--->
+---
+script_path: Readme.md
+description: >-
+  User-facing documentation for the protolib package, covering installation, directory layout,
+  and command usage. It defines the core versus app separation invariant and details the proto-admin
+  sync mechanism for framework propagation. Serves as the primary reference for clone owners
+  and developers interacting with the self-similar template system.
+tags:
+- blueprint
+- docs
+- infra
+update_rules: Update when user-facing behaviour, commands, or parameters change.
+---
 
 # Protolib — Self-Similar Python Package Template
 
@@ -28,7 +34,7 @@ src/protolib/
 ├── app/            # application layer (clone owners edit here)
 ├── core/           # framework: registry, APIs, admin, creator
 ├── helpers/        # pure utilities (no app/core dependencies)
-├── test/           # integration tests + master governance engine (test/core/gov/)
+├── test/           # integration tests (governance scanner: ~/repos/governance)
 ```
 
 Tests: see [`src/protolib/test/Readme.md`](src/protolib/test/Readme.md).

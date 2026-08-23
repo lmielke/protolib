@@ -1,7 +1,15 @@
 """
 script_path: src/protolib/test/core/creator/test_python_versions.py
-purpose: "Integration tests for core/creator/python_versions.py — Python version discovery."
-update_rules: "Append scenarios. Never remove existing tests."
+description: >-
+  Runs integration tests for the PythonVersions class to verify Python version discovery logic.
+  Validates command execution, pyenv detection, PATH scanning, and uv installation lookup.
+  Ensures version sorting and info string formatting meet expected invariants for the creator
+  module.
+tags:
+- infra
+- parsing
+- testing
+update_rules: Append scenarios. Never remove existing tests.
 """
 import os, unittest
 import protolib.test.core.helpers as testhelper

@@ -1,7 +1,14 @@
 """
 script_path: src/protolib/test/core/creator/test_clone.py
-purpose: "Integration tests for core/creator/clone.py — CloneParams, Cloner, Validator."
-update_rules: "Append scenarios. Never remove existing tests."
+description: >-
+  Runs integration tests for the core creator clone module, covering CloneParams, Cloner,
+  and Validator. Verifies text replacement mappings, file rename rules, and pre-flight validation
+  logic for ports and Python versions. Ensures post-flight gate execution behaves correctly
+  based on installation flags.
+tags:
+- parsing
+- testing
+update_rules: Append scenarios. Never remove existing tests.
 """
 import unittest
 from unittest import mock

@@ -1,162 +1,173 @@
 ---
-script_path: /home/lars/repos/protolib/.claude/rules/test_gov.md
-paths: ["**/*.py"]
-purpose: "Governance-authoritative test-module skeleton — docstring, imports, shape choice (unittest vs pytest), main guard, and check catalog."
-description: "Covers both unittest.TestCase and pytest function shapes with worked examples. Lists the package-level checks that fire on test modules with their fix hints. Use alongside py_test_style.md (day-to-day designer summary) and pr_testing.md (project layout)."
-update_rules: "Update requires explicit approval."
+script_path: .claude/rules/test_gov.md
+description: >-
+  Defines mandatory Python governance check codes and a twelve-pattern function-shrinking
+  catalogue. Agents consult it before writing or refactoring code to satisfy c1 and c11 limits.
+  The governance test suite enforces these rules at test time, and the file points to governance_python.py
+  for concrete refactor examples.
+tags:
+- governance
+- python
+- rule
+- testing
+update_rules: >-
+  Append new patterns with name + one-paragraph heuristic. Concrete before/after examples
+  live per-step in governance_python.py — do not duplicate them here.
+paths:
+- '**/*.py'
 ---
 
-See also: @rules/test_style.md (designer summary), @rules/testing_project.md (project test conventions).
+See also: @rules/architecture_python.md (package shape),
+@rules/code_style_python.md (designer summary),
+@rules/test_style_python.md (test playbook),
+@rules/governance_health.md (cleanup contract).
 
-# Test Module — Governance Reference
+# Python Governance Reference
 
-Every code file must be accompanied by a `test_<module_name>.py`.
-Tests are integration tests (IT) or end-to-end (E2E) — no unit tests.
+Strictly enforced at test time by `src/<pkg>/test/core/test_governance.py`.
+Target state: zero errors, zero warnings — see @rules/governance_health.md
+for severity policy and the action ladder.
 
-**Runner:** `uv run pytest`. Pytest runs both `unittest.TestCase` subclasses and
-plain pytest functions. Both shapes are legal; see "Shape Choice" below.
+## Authoritative Source
 
-## Skeleton Components
+Per-step rules and concrete before/after refactor blocks live in
+`~/repos/governance/src/governance/app/python/governance_python.py`.
+Read a slice without loading the whole file:
 
-### Test Module Docstring
-Same template as production modules — `script_path:` and `purpose:` are required.
-Reference template: `@/home/lars/repos/protolib/src/protolib/core/resources/docstring_templates.yml`
+```bash
+cd ~/repos/governance/src/governance/app/python
 
-### Imports
-- `pytest` for parametrize/fixtures; `unittest` when using class form
-- The module under test, imported directly (no mocking unless unavoidable)
-- `testhelper` for temp-dir setup — read `testhelper.py` before writing new tests.
-  **Using `@test_setup` is not optional** when your fixture needs a tmpdir, chdir,
-  or file copy; manual `setUp` for any of these fires the `testhelper candidates`
-  check and is treated as a structural violation, not a style preference.
+# description previews, all steps (≤5 lines each)
+awk '/^## c[0-9_]+ /{step=$0} /^[[:space:]]*description: \|-/{print ""; print step; n=0; d=1; next} d && /^[[:space:]]{2}[A-Za-z0-9]/{if(n++<5) print; next} d && n>=5{d=0}' governance_python.py
 
-### Shape Choice
-| Shape | When |
-|---|---|
-| `unittest.TestCase` class | Stateful IT with shared setup; porting-friendly for existing suites |
-| `pytest` function + parametrize | Multi-scenario IT over one contract; new tests by default |
-| `pytest` function + fixtures | E2E with composed setup (temp dir + service + fixture data) |
+# single step (replace c1 with target id)
+sed -n '/^## c1 /,/^## c[0-9]/p' governance_python.py
 
-### Test Classes (unittest shape)
-One `unittest.TestCase` subclass per logical concern. Group by behaviour, not method name.
-Each class docstring states what contract it is verifying.
+# rules bullets, all steps
+awk '/^## c[0-9_]+ /{step=$0; r=0} /^[[:space:]]*rules: \|-/{print ""; print step; r=1; next} r==1 && /^[[:space:]]{2}-/{print; next} r==1 {r=0}' governance_python.py
 
-### Test Methods / Functions
-- Name: `test_<scenario>` — describes the input condition or expected outcome
-- Always include `*args, **kwargs` on the signature (governance c5)
-- Use `assert` (pytest) or `self.assert*` (unittest) — prefer the most specific form
-- Inputs must be realistic; expected outputs must be independently derivable
-
-### Main Guard (unittest shape only)
-```python
-if __name__ == '__main__':
-    unittest.main()
-```
-Pytest discovery needs no main guard.
-
-## Governance Checks — Test Related
-
-Authoritative source: `@/home/lars/repos/protolib/src/protolib/test/core/helpers/gov/pkg.py`.
-Strictly adhere to every check below — each one catches real structural drift
-that compounds into flaky suites and hidden coupling when ignored. Resolution
-is cheaper when done at write-time than during a refactor.
-
-| Check | Why | Fix |
-|---|---|---|
-| `mock usage` | Mocking hides real behavior; IT loses signal | Remove mocks; use realistic inputs + `@test_setup` |
-| `testhelper candidates` | Manual tmpdir / chdir / cleanup duplicates the decorator | Replace `setUp` with `@test_setup` from `test/core/helpers/setup.py` |
-| `test file location` | `test_*.py` outside `test/` is not collected; can shadow real modules | Move under `src/<pkg>/test/` mirroring the module it tests |
-| `sync drift` | Framework files modified after `last_synced` drift from upstream | Run `proto-admin sync` or push the change upstream first |
-| `test core helper location` | Non-test files in `test/core/` bypass the helpers boundary | Move under `test/core/helpers/` and update imports |
-| `test imports test file` | `test_*.py` importing another `test_*.py` creates hidden coupling | Extract shared code to `test/core/helpers/` |
-
-Def-level checks also apply inside tests:
-- `c1` — method body ≤ 7 code lines
-- `c5` — `*args, **kwargs` in every signature
-- `c11` — line length ≤ 95
-- `c8` — `TestCase.setUp` replaces `__init__` (declare as a `governance_exception`)
-
-## Minimal Test Module — unittest shape
-
-For stateful IT with shared `setUp`. Paired with the `Registry` example in
-`@rules/module_gov.md`. Covers normal path, edge cases, failure modes.
-
-```python
-"""
-script_path: src/mypackage/test/core/test_registry.py
-purpose: "Integration tests for core/registry.py — service registration contract."
-description: "Covers register() and register_all() across valid, invalid, and batch inputs."
-update_rules: "Append scenarios. Never remove existing tests."
-governance_exceptions:
-  - c8: "test module — unittest.TestCase replaces __init__"
-"""
-import unittest
-from mypackage.core.registry import Registry
-
-SVC = {"sid": "auth", "host": "localhost", "port": 8080}
-
-
-class TestRegister(unittest.TestCase):
-    """
-    purpose: "register() stores the service and returns empty on success."
-    description: "Covers valid entry, empty sid, stored metadata, default status."
-    governance_exceptions:
-      - c2: "reason"
-    """
-
-    def setUp(self, *args, **kwargs):
-        self.r = Registry()
-
-    def test_valid_entry_returns_empty(self, *args, **kwargs):
-        """purpose: 'Valid sid produces no errors.'"""
-        self.assertEqual(self.r.register(**SVC), [])
-
-    def test_service_stored_after_register(self, *args, **kwargs):
-        """purpose: 'Service is present in the map after registration.'"""
-        self.r.register(**SVC)
-        self.assertIn("auth", self.r.services)
-
-    def test_empty_sid_returns_error(self, *args, **kwargs):
-        """purpose: 'Empty sid triggers the guard and returns one error.'"""
-        self.assertEqual(len(self.r.register(sid="", host="localhost")), 1)
-
-
-if __name__ == '__main__':
-    unittest.main()
+# refactor fences, all steps
+awk '/^## c[0-9_]+ /{step=$0; r=0} /^[[:space:]]*refactor: \|-/{print ""; print step; r=1; next} r==1 && /^[^ ]/{r=0} r==1' governance_python.py
 ```
 
-## Minimal Test Module — pytest shape
 
-For multi-scenario IT over the same contract. Same coverage, one test body.
+## Mandatory Checks
+
+Cannot be suppressed. Fix at write-time.
+
+| Code        | Scope    | Rule                                                      |
+| ----------- | -------- | --------------------------------------------------------- |
+| `c1`        | def      | Method body ≤ 7 code lines                                |
+| `c5`        | def      | `*args, **kwargs` in every signature                      |
+| `c6`        | def      | No `;`-joined statements                                  |
+| `c11`       | line     | Length ≤ 95 chars                                         |
+| `c15`       | def      | Indent ≤ 16 spaces (no deep nesting)                      |
+| `c18`       | module   | Every `<module>.py` paired with `test_<module>.py`        |
+| `c_dfmt`    | docstring| Front-matter present and well-formed                     |
+| `c_dscope`  | docstring| `script_path:` + `purpose:` on module/class/def           |
+| `c_dorph`   | docstring| No orphan front-matter blocks                             |
+
+Planned test-related checks (named, **not yet wired into the scanner** —
+treat as conventions, not enforced gates): `mock usage`, `testhelper
+candidates`, `test file location`, `sync drift`, `test core helper
+location`, `test imports test file`. Of the test set, only `c18` (pairing,
+glob sub) is live today.
+
+`c8` (`__init__` forbidden) is waived for `unittest.TestCase` subclasses
+via a `governance_exceptions:` entry in the class docstring.
+
+## Definition Patterns
+
+Apply when a function trips `c1` or `c11`. Concrete before/after blocks
+live per-step in `governance_python.py`.
+
+### Gold-Standard Exemplars
+
+Real protolib functions that already fit. All from
+`src/protolib/test/core/test_governance.py`.
 
 ```python
-"""
-script_path: src/mypackage/test/core/test_registry.py
-purpose: "Integration tests for core/registry.py — service registration contract."
-description: "Parametrized scenarios for register() — valid, empty, duplicate."
-update_rules: "Append scenarios to the parametrize list."
-"""
-import pytest
-from mypackage.core.registry import Registry
+# single-expression ternary return — one purpose, one return, no locals
+def _compose(*args, technical, display, **kwargs) -> str:
+    """Canonical print form: '(tech) - display'. Omits display if empty."""
+    return f"({technical}) - {display}" if display else f"({technical})"
 
+# factory with named kwargs as schema — signature is the contract
+def _rec(*args, line, scope, technical, display="", level, **kwargs) -> dict:
+    """Governance record. level is 'warn' or 'error'."""
+    return {"line": line, "scope": scope, "level": level,
+            "technical_message": technical, "display_message": display}
 
-@pytest.fixture
-def registry(*args, **kwargs):
-    return Registry()
-
-
-@pytest.mark.parametrize("sid,host,expected", [
-    ("auth", "localhost", []),
-    ("",     "localhost", ["port: sid must not be empty"]),
-    ("db",   "localhost", []),
-])
-def test_register(registry, sid, host, expected, *args, **kwargs):
-    """purpose: 'register() returns expected error list per scenario.'"""
-    assert registry.register(sid=sid, host=host) == expected
-
-
-def test_register_all_aggregates_errors(registry, *args, **kwargs):
-    """purpose: 'register_all() returns one error per invalid entry.'"""
-    entries = [{"sid": "auth", "host": "x"}, {"sid": "", "host": "x"}]
-    assert len(registry.register_all(entries=entries)) == 1
+# early-return then ternary — one guard, one comparison, one error
+def _dfmt_script_path(meta, rel, line, *args, **kwargs) -> list:
+    got = meta.get('script_path')
+    if got is None: return []
+    want = f"src/{PKG}/{rel.replace(os.sep, '/')}"
+    return [] if got == want else [f"line {line}: [module] script_path {got!r} != {want!r}"]
 ```
+
+### Refactor Patterns
+
+#### Trust the Invariant
+Delete guards that defend against conditions that cannot occur. Can't name
+the code path that produces it → delete.
+
+#### Fail Loud
+Don't wrap logic in `try/except` that silently swallows real corruption.
+Reserve it for expected failure modes (network, optional file, race).
+
+#### Put It in Its Place
+Data (paths, prefixes, allowed-key sets) belongs in `settings.py` or as
+module/class constants, not inline in consumer methods. Mutable accumulators
+can't become constants — use **Property not Parameter**.
+
+#### Single Source of Truth
+After hoisting, grep for the literal. Any other definition is a fossil.
+
+#### Delete the Pass-Through
+A method whose body is a single call to another is cognitive overhead.
+Rename the implementation to the public name; delete the wrapper.
+
+#### Decouple — Make Two Out of One
+Function does two things joined by *and* → split at the seam. Each layer
+stays under the line budget because work is layered, not concatenated.
+Extract reset preludes into `_reset_buffers()` to avoid `;`-joined clears.
+
+#### Delegate — Push Up or Push Down
+Push up: step needs caller context → caller does it. Push down: step always
+pairs with a specific call → fold into callee.
+
+#### Lift the Side Effect
+Keep the core focused on transformation; hoist side effects (cache writes,
+logging) to the caller.
+
+#### Property not Parameter
+Value is conceptually an attribute (time, user, buffer) → expose as
+`self.x`. Don't thread through N signatures. Same move for accumulators: a
+`tree = [...]` threaded through helpers becomes `self._out` — two channels
+(param + attr) for one buffer is always wrong. For test determinism, accept
+an override on the test-surface method only.
+
+#### Skip the Throwaway Local
+Assigned once, used next line, never again → inline. Keep the local only
+when the name genuinely clarifies intent.
+
+#### Inline the Micro-Function
+Module-level one-liner used ≤ 2 times → inline the stdlib call.
+
+#### Syntactic Sweetening
+Compact Python idioms when the expression fits on one line and stays
+readable: ternary return `return x if cond else y`, inline assignment
+`if state: self._cached = state`, fallback `value or default`, list
+comprehension instead of loop + append.
+
+**Watch:** `c6` (no `;`), `c11` (≤ 95 chars). If compaction pushes indent
+over `c15` (16 spaces), bind the comprehension to a local first.
+
+## Sequencing
+
+Apply in order; stop once the function fits under 7 code lines:
+Trust → Fail Loud → Put in Its Place → Single Source of Truth →
+Delete Pass-Through → Decouple → Delegate → Lift Side Effect →
+Property not Parameter → Skip Throwaway Local → Inline Micro-Function →
+Sweeten.

@@ -1,7 +1,14 @@
 """
 script_path: src/protolib/test/helpers/test_function_to_json.py
-purpose: "Integration tests for helpers/function_to_json.py — schema generation."
-update_rules: "Append scenarios. Never remove existing tests."
+description: >-
+  Runs integration tests for the function_to_json helper module, verifying schema generation
+  from Python signatures and docstrings. Validates type mapping, parameter extraction, and
+  JSON serialization logic. Consumes the BaseSchema and FunctionToJson classes to ensure correct
+  output structures.
+tags:
+- parsing
+- testing
+update_rules: Append scenarios. Never remove existing tests.
 """
 import inspect, json, os, tempfile, shutil, unittest
 from protolib.helpers.function_to_json import (
@@ -138,14 +145,14 @@ class TestBaseSchemaSetFields(unittest.TestCase):
 
     def test_fields_populated(self):
         props = FunctionToJson.read_signature(sample_func)
-        schema = BaseSchema.set_fields(sample_func, sample_no_return, props)
+        schema = BaseSchema.set_fields(sample_func, props, test_meth=sample_no_return)
         assert schema.name == "sample_func"
         assert schema.returns == "string"
         assert "properties" in schema.parameters
 
     def test_to_dict(self):
         props = FunctionToJson.read_signature(sample_func)
-        schema = BaseSchema.set_fields(sample_func, sample_no_return, props)
+        schema = BaseSchema.set_fields(sample_func, props, test_meth=sample_no_return)
         d = schema.to_dict()
         assert isinstance(d, dict)
         assert d["name"] == "sample_func"
@@ -177,18 +184,18 @@ class TestOpenaiSchemaSetFields(unittest.TestCase):
 
     def test_required_collected(self):
         props = FunctionToJson.read_signature(sample_func)
-        schema = OpenaiSchema.set_fields(sample_func, sample_no_return, props)
+        schema = OpenaiSchema.set_fields(sample_func, props)
         assert "name" in schema.parameters["required"]
 
     def test_required_flag_stripped_from_props(self):
         props = FunctionToJson.read_signature(sample_func)
-        schema = OpenaiSchema.set_fields(sample_func, sample_no_return, props)
+        schema = OpenaiSchema.set_fields(sample_func, props)
         for prop_meta in schema.parameters["properties"].values():
             assert "required" not in prop_meta
 
     def test_to_dict_keys(self):
         props = FunctionToJson.read_signature(sample_func)
-        schema = OpenaiSchema.set_fields(sample_func, sample_no_return, props)
+        schema = OpenaiSchema.set_fields(sample_func, props)
         d = schema.to_dict()
         assert set(d.keys()) == {"name", "description", "parameters", "returns"}
 

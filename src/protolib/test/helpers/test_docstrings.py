@@ -1,7 +1,13 @@
 """
 script_path: src/protolib/test/helpers/test_docstrings.py
-purpose: "Integration tests for helpers/docstrings.py — Docstring and Docstrings."
-update_rules: "Append scenarios. Never remove existing tests."
+description: >-
+  Runs integration tests for the Docstring and Docstrings helper classes. Validates metadata
+  parsing, body extraction, and AST-based factory methods. Ensures malformed inputs return
+  safe defaults. Consumed by the protolib test suite to verify docstring handling logic.
+tags:
+- parsing
+- testing
+update_rules: Append scenarios. Never remove existing tests.
 """
 import ast, unittest
 from protolib.helpers.docstrings import Docstring, Docstrings
@@ -15,6 +21,26 @@ VALID = (
 )
 
 MALFORMED = 'key: [unclosed\n\nbody'
+
+# Block scalar with an internal blank line (the defect case)
+BLOCK_SCALAR = (
+    'script_path: src/foo.py\n'
+    'description: |\n'
+    '  First paragraph of the description.\n'
+    '\n'
+    '  Second paragraph — still part of description.\n'
+    '\n'
+    'Body text that must NOT be absorbed into meta.'
+)
+
+# Body that looks like YAML key: value — must not be absorbed into meta
+PROSE_BODY = (
+    'script_path: src/foo.py\n'
+    'purpose: "demo"\n'
+    '\n'
+    'key: value prose line\n'
+    'another: line'
+)
 
 
 class TestDocstring(unittest.TestCase):
@@ -57,6 +83,26 @@ class TestDocstring(unittest.TestCase):
         d = Docstring('purpose: "x"')
         self.assertEqual(d.meta['purpose'], 'x')
         self.assertEqual(d.body, '')
+
+    def test_block_scalar_internal_blank_retained_in_meta(self):
+        """purpose: 'Block scalar with internal blank line: description fully parsed into meta.'"""
+        d = Docstring(BLOCK_SCALAR)
+        self.assertIsNotNone(d.meta)
+        desc = d.meta.get('description', '')
+        self.assertIn('First paragraph', desc)
+        self.assertIn('Second paragraph', desc)
+
+    def test_block_scalar_body_not_absorbed(self):
+        """purpose: 'Body text after a block-scalar head must appear in body, not meta.'"""
+        d = Docstring(BLOCK_SCALAR)
+        self.assertIn('Body text', d.body)
+
+    def test_prose_body_not_absorbed_as_meta(self):
+        """purpose: 'key: value prose lines in the body must not be parsed as meta fields.'"""
+        d = Docstring(PROSE_BODY)
+        self.assertIsNotNone(d.meta)
+        self.assertNotIn('key', d.meta)
+        self.assertIn('key: value prose line', d.body)
 
 
 CLS_SRC = '''

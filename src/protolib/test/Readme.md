@@ -1,8 +1,16 @@
-<!--
+---
 script_path: src/protolib/test/Readme.md
-purpose: "Test-suite guide: layout, entry points, governance engine, manual EtE protocol."
-update_rules: "Update when suite layout, entry points, or EtE protocol change."
--->
+description: >-
+  Documents the protolib test suite layout, entry points, and governance integration. Defines
+  the sync boundary between core and app tests, and details the manual end-to-end protocol
+  for validating clone self-similarity. Serves as the operational guide for running integration
+  tests and debugging sync regressions.
+tags:
+- docs
+- governance
+- testing
+update_rules: Update when suite layout, entry points, or EtE protocol change.
+---
 
 # protolib — Test Suite
 
@@ -14,20 +22,19 @@ Master test suite for protolib and the self-similar template all clones inherit.
 ```
 src/protolib/test
 ├── app/       # application ITs (clone-owned)
-├── core/      # framework + governance ITs (sync-owned)
-│   └── gov/   # master governance engine (governance.py + helpers/cN.py + base.py + settings.yml + logs/)
-├── data/      # test fixtures (governance_fixtures, test_protopy.yml, …)
+├── core/      # framework ITs (sync-owned)
+├── data/      # test fixtures (test_protopy.yml, …)
 ├── helpers/   # package-level helper ITs
 └── test_results.yaml
 ```
 
 For more detail, RUN: `tree -L 2 -I '__pycache__|*.pyc' src/protolib/test`.
 
-Key files in `core/`: `test_all.py` (per-module orchestrator → `test_results.yaml`), `test_kwargs.py`, plus the `gov/` master-engine subtree.
+Key files in `core/`: `test_all.py` (per-module orchestrator → `test_results.yaml`), `test_kwargs.py`.
 
-Master-engine gov suite lives in `core/gov/`: `governance.py` is the literate master (one `## cN` block per rule, plus a callable `run()` returning `(warnings, errors)`), `helpers/cN.py` are dumb helpers, `base.py` is the orchestrator, `settings.yml` holds thresholds, `logs/` carries runtime + audit yamls. Run with `uv run python -m protolib.test.core.gov.governance` (exits 0 clean, 1 on errors). Kitchen-sink fixture: `test/core/data/gov_violations.py`.
-
-Legacy `test/core/test_governance*.py` and `test/core/helpers/gov/*` are tagged `[TO_DELETE]` (slated for removal — replaced by `core/gov/`).
+Governance scanning is owned by the standalone `governance` package
+(`~/repos/governance`) — run via `gov run --target ~/repos/protolib`.
+Kitchen-sink fixture: `test/core/data/gov_violations.py`.
 
 **Sync boundary:** `test/core/` follows `core/` + `helpers/` to every clone; `test/app/` stays clone-local.
 
@@ -37,14 +44,12 @@ Legacy `test/core/test_governance*.py` and `test/core/helpers/gov/*` are tagged 
 |---|---|
 | Full test suite | `uv run pytest src/protolib/test/` |
 | Per-module IT orchestrator | `uv run python -m protolib.test.core.test_all` |
-| Governance | `uv run python -m protolib.test.core.gov.governance` |
-| Auto-correct (c24/c26/c28) | `uv run python -m protolib.test.core.helpers.auto_correct` |
+| Governance scan | `cd ~/repos/governance && uv run gov run --target ~/repos/protolib` |
 | Self-similar EtE | `~/scripts/testing/test_e2e_recursive.sh` |
 
 Results:
 - `test/test_results.yaml` — per-module IT orchestrator output
-- `test/core/gov/logs/governance_log.yaml` — governance violations per source file
-- `test/core/gov/logs/governance_exceptions_log.yaml` — active `governance_exceptions` entries
+- `~/.governance/logs/protolib_gov_log.yaml` — governance violations per source file
 - `~/.protolib/test_results.json` — consumed by the PACKAGE terminal-header coverage field
 
 ## Philosophy
@@ -54,28 +59,17 @@ Results:
 - Every test validates its own prerequisites — a failed prerequisite produces a clear error, not a cryptic test failure.
 - `testhelper.py` is gone; infrastructure lives in `test/core/helpers/setup.py`, re-exported via `test/core/helpers/__init__.py`. Consumers keep writing `import protolib.test.core.helpers as testhelper` and calling `@testhelper.test_setup(...)`.
 
-## Governance Engine
+## Governance
 
-Rule catalog is the literate master `test/core/gov/governance.py` itself: one `## cN`
-markdown block per rule, parsed at run time by `base.py` into the runtime `CHECKS` dict.
-Each block carries the rule's `scope`, `level`, exception policy, and a docstring of
-the matching helper at `test/core/gov/helpers/cN.py`. Per-scope contract: declaration
-scope ≡ emission scope (a `governance_exception` for `cN` lives in the docstring of
-the node — module / class / def — where the violation fires).
+Governance scanning is owned by the standalone `governance` package
+(`~/repos/governance`). Run against this repo with:
 
-| Category | Rules |
-|---|---|
-| Mandatory (no exception) | c1 (fn len ≤ 7), c11 (line len ≤ 95), c_dfmt, c_dscope, c_dorph |
-| Auto-fixable | c24 (def spacing), c26 (relative imports), c28 (bare except) |
-| Suppressible | all others via docstring `governance_exceptions: [- cN: "reason"]` |
+```bash
+cd ~/repos/governance && uv run gov run --target ~/repos/protolib
+```
 
-Adding a new rule: create `test/core/gov/helpers/cN.py` with the check function, add a
-`## cN` block in `governance.py` with the YAML front-matter (scope, level, etc.), and add
-the helper to `base.py`'s dispatch table. The literate master picks it up at next run.
-
-Programmatic entry point: `from protolib.test.core.gov.governance import run` — returns
-`(warnings, errors)` lists. Used by `protopy.DefaultClass._check_governance` when
-`settings.run_checks` is enabled.
+See the governance package's `Readme.md` for rule catalog, severity policy,
+and exception conventions.
 
 ## Manual End-to-End Protocol
 

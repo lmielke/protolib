@@ -1,7 +1,13 @@
 """
 script_path: src/protolib/test/app/apis/test_entry_point.py
-purpose: "Integration tests for app/apis/entry_point.py — example API."
-update_rules: "Append scenarios. Never remove existing tests."
+description: >-
+  Verifies the entry point API wrapper by asserting that the main function is callable. Serves
+  as an integration test baseline for the example API module. Follows append-only update rules
+  to preserve existing test scenarios.
+tags:
+- api
+- testing
+update_rules: Append scenarios. Never remove existing tests.
 """
 import unittest
 

@@ -1,7 +1,15 @@
 """
 script_path: src/protolib/test/core/test_settings.py
-purpose: "Integration tests for core/settings.py — path resolution and config."
-update_rules: "Append scenarios. Never remove existing tests."
+description: >-
+  Runs integration tests for protolib.core.settings to verify path resolution and static configuration
+  values. Asserts that core, package, and source directories exist and that derived names
+  match expected values. Validates registry port ranges, extension mappings, and main file
+  resolution against the project structure.
+tags:
+- infra
+- settings
+- testing
+update_rules: Append scenarios. Never remove existing tests.
 """
 import os, unittest
 import protolib.core.settings as sts
@@ -53,6 +61,11 @@ class TestConfigValues(unittest.TestCase):
     def test_extensions_set(self, *args, **kwargs):
         assert sts.eext == ".yml"
         assert sts.fext == ".json"
+
+    def test_main_file_name_resolves_from_pyproject(self, *args, **kwargs):
+        assert sts.main_file_name.endswith(".py") and len(sts.main_file_name) > 3
+        found = [r for r, _, fs in os.walk(sts.package_dir) if sts.main_file_name in fs]
+        assert found, f"{sts.main_file_name} not found under {sts.package_dir}"
 
 
 if __name__ == '__main__':

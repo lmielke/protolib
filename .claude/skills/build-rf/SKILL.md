@@ -1,15 +1,9 @@
 ---
 name: build-rf
-description: "Use when a refactor blueprint's implementation plan has [open] remediation steps to execute. Triggers: 'execute the refactor plan', 'fix the governance violations', 'run the refactor build'. Executes mandatory/auto-fixable/suppressible fixes and closes with green tests."
+description: "Execute the remediation steps of an approved REFACTOR blueprint -- works through the [open] mandatory/auto-fixable/suppressible fixes and closes with green tests. Use when a refactor blueprint's implementation plan is ready to run: 'execute the refactor plan', 'run the refactor build', 'apply the remediation steps from the blueprint'. This is the planned, blueprinted path: for a quick ad-hoc cleanup with no blueprint use governance instead; to write the refactor's design sections first use design-rf; the full design-review-build refactor flow is the /refactor orchestrator."
 argument-hint: "[project] [bp-path]"
 allowed-tools: Read, Write, Edit, Glob, Grep, Bash
 ---
-
-<!--
-script_path: ~/.claude/skills/build-rf/SKILL.md
-purpose: "Refactor build leaf — executes remediations from a refactor impl plan and closes with a green suite."
-update_rules: "Update requires explicit approval."
--->
 
 # Purpose
 Refactor-build leaf. Executes the `[open]` remediation steps of a refactor
@@ -20,7 +14,7 @@ contract: must be `refactor`; fails loud otherwise.
 
 # Rule set
 Append-only impl plan; `[open]→[done]`:
-@rules/bp_plan.md
+@rules/bp_implementation_plan.md
 
 Refactor-section contract the remediation satisfies:
 @rules/bp_refactor.md
@@ -29,8 +23,8 @@ Find-refs-first, minimal change:
 @rules/code_refactor.md
 
 Governance skeletons the remediation must satisfy:
-@rules/module_gov.md
-@rules/def_gov.md
+@rules/code_style_python.md
+@rules/test_style_python.md
 @rules/test_gov.md
 
 Test discipline for §Test Coverage remediation:

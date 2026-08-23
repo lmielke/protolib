@@ -1,6 +1,6 @@
 ---
 name: design-rf
-description: "Use when a refactor blueprint needs its QM sections populated (Violations found / Desired end state). Triggers: 'design the refactor sections', 'populate violations for this blueprint', 'write the refactor design'. Design-only -- does NOT execute remediations."
+description: "Populate the QM sections of a REFACTOR blueprint -- the Violations Found and Desired End State that drive the remediation plan. Use when a refactor needs its design written up: 'design the refactor sections', 'populate the violations for this blueprint', 'write the refactor design', 'document the desired end state'. Design-only -- it does NOT execute any remediation (that is build-rf). For feature (non-refactor) architecture use design-ar; for a quick unplanned cleanup with no blueprint use governance; the full refactor flow is the /refactor orchestrator."
 argument-hint: "[project] [scope|bp-path]"
 allowed-tools: Read, Write, Edit, Glob, Grep, Bash, Skill
 ---
@@ -18,7 +18,7 @@ for the strategic weight.
 Blueprint + refactor-section shape:
 @rules/bp.md
 @rules/bp_refactor.md
-@rules/bp_plan.md
+@rules/bp_implementation_plan.md
 
 Place the change strategically in the package:
 @rules/architecture.md

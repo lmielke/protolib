@@ -1,0 +1,107 @@
+generated_at: '2026-05-02T11:15:57+00:00'
+total: 20
+by_rule:
+  c8:
+  - file: protolib/app/apis/entry_point.py
+    scope: module
+    line: 1
+    node: entry_point.py
+    tech: "no class definition \u2014 verify OOP intent"
+  - file: protolib/app/apis/select_files.py
+    scope: module
+    line: 1
+    node: select_files.py
+    tech: "no class definition \u2014 verify OOP intent"
+  - file: protolib/app/arguments.py
+    scope: module
+    line: 1
+    node: arguments.py
+    tech: "no class definition \u2014 verify OOP intent"
+  - file: protolib/app/contracts.py
+    scope: module
+    line: 1
+    node: contracts.py
+    tech: "no class definition \u2014 verify OOP intent"
+  - file: protolib/app/settings.py
+    scope: module
+    line: 1
+    node: settings.py
+    tech: "no class definition \u2014 verify OOP intent"
+  - file: protolib/core/apis/announce.py
+    scope: module
+    line: 1
+    node: announce.py
+    tech: "no class definition \u2014 verify OOP intent"
+  - file: protolib/core/apis/discover.py
+    scope: module
+    line: 1
+    node: discover.py
+    tech: "no class definition \u2014 verify OOP intent"
+  - file: protolib/core/apis/expose_api.py
+    scope: module
+    line: 1
+    node: expose_api.py
+    tech: "no class definition \u2014 verify OOP intent"
+  - file: protolib/core/apis/info.py
+    scope: module
+    line: 1
+    node: info.py
+    tech: "no class definition \u2014 verify OOP intent"
+  - file: protolib/core/apis/register.py
+    scope: module
+    line: 1
+    node: register.py
+    tech: "no class definition \u2014 verify OOP intent"
+  - file: protolib/core/arguments.py
+    scope: module
+    line: 1
+    node: arguments.py
+    tech: "no class definition \u2014 verify OOP intent"
+  - file: protolib/core/creator/archive.py
+    scope: module
+    line: 1
+    node: archive.py
+    tech: "no class definition \u2014 verify OOP intent"
+  - file: protolib/core/settings.py
+    scope: module
+    line: 1
+    node: settings.py
+    tech: "no class definition \u2014 verify OOP intent"
+  - file: protolib/helpers/collections.py
+    scope: module
+    line: 1
+    node: collections.py
+    tech: "no class definition \u2014 verify OOP intent"
+  c41:
+  - file: protolib/app/arguments.py
+    scope: module
+    line: 1
+    node: arguments.py
+    tech: duplicate basename at app/arguments.py, core/arguments.py
+  - file: protolib/app/settings.py
+    scope: module
+    line: 1
+    node: settings.py
+    tech: duplicate basename at app/settings.py, core/settings.py
+  - file: protolib/core/arguments.py
+    scope: module
+    line: 1
+    node: arguments.py
+    tech: duplicate basename at app/arguments.py, core/arguments.py
+  - file: protolib/core/settings.py
+    scope: module
+    line: 1
+    node: settings.py
+    tech: duplicate basename at app/settings.py, core/settings.py
+  c25:
+  - file: protolib/app/protopy.py
+    scope: def
+    line: 38
+    node: _check_governance
+    tech: "local import in _check_governance() \u2014 move to module top"
+  c3:
+  - file: protolib/helpers/printing.py
+    scope: module
+    line: 1
+    node: printing.py
+    tech: module has 308 lines (>300)

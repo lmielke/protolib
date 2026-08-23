@@ -1,7 +1,15 @@
 """
 script_path: src/protolib/test/app/test_arguments.py
-purpose: "Integration tests for app/arguments.py — CLI argument parsing."
-update_rules: "Append scenarios. Never remove existing tests."
+description: >-
+  Runs integration tests for the CLI argument parsing module in protolib. Verifies that spec
+  dictionaries extract correct flags and keyword arguments, and that positional and optional
+  definitions are well-formed. Confirms that helper functions correctly register arguments
+  on an argparse parser instance.
+tags:
+- cli
+- parsing
+- testing
+update_rules: Append scenarios. Never remove existing tests.
 """
 import unittest
 from protolib.app.arguments import (

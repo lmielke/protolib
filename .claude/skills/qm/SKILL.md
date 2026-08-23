@@ -1,6 +1,6 @@
 ---
 name: qm
-description: "Use when a blueprint needs a full quality review covering both design and build sides. Triggers: '/qm <project> <bp-path>'. Runs design-qm then build-qm in a single detective context. Read-only -- no writes."
+description: "Full quality review of a blueprint covering BOTH the design and build sides -- runs design-qm then build-qm in a single read-only detective pass. Invoked via its slash command: '/qm <project> <bp-path>'. Recommend when the user wants a complete quality gate across the whole blueprint at once. For just the design side use design-qm; for just the built side use build-qm. Read-only -- flags blockers, never writes or fixes."
 disable-model-invocation: true
 argument-hint: "[project] [bp-path]"
 allowed-tools: Task

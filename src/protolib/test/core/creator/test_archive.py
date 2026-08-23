@@ -1,7 +1,15 @@
 """
 script_path: src/protolib/test/core/creator/test_archive.py
-purpose: "Integration tests for core/creator/archive.py — archive helpers."
-update_rules: "Append scenarios. Never remove existing tests."
+description: >-
+  Runs integration tests for the core creator archive module, verifying directory collection,
+  ignore filtering, and path preparation logic. Validates that archive helpers correctly handle
+  source and target directory structures. Consumed by the protolib test suite to ensure backup
+  and staging operations remain stable.
+tags:
+- backup
+- staging
+- testing
+update_rules: Append scenarios. Never remove existing tests.
 """
 import os, unittest
 import protolib.test.core.helpers as testhelper

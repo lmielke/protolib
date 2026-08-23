@@ -1,6 +1,6 @@
 ---
 name: design-qm
-description: "Use when a design blueprint needs a quality review before build. Triggers: 'review this blueprint', 'QM check the design', 'critique the blueprint before implementation'. Read-only -- flags blockers, does NOT write sections."
+description: "Quality review of a DESIGN blueprint before any code is built -- reads the blueprint and flags blockers, gaps, and contract violations. Read-only: it does not write or fix sections. Use when the user wants a design critiqued prior to implementation: 'review this blueprint', 'QM check the design', 'is this blueprint ready to build', 'critique the design before we implement'. This reviews the design side only; to verify an already-built blueprint before sign-off use build-qm, and for both sides in one pass recommend /qm. Not for general code questions (use info)."
 argument-hint: "[project] [bp-path]"
 allowed-tools: Read, Glob, Grep, Bash
 ---
@@ -21,8 +21,8 @@ Architecture placement (abstract base + Python specialization):
 @rules/architecture_python.md
 
 Module + function governance skeletons:
-@rules/module_gov.md
-@rules/def_gov.md
+@rules/code_style_python.md
+@rules/test_gov.md
 
 Test-plan rules:
 @rules/test_gov.md

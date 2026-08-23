@@ -1,7 +1,14 @@
 """
 script_path: src/protolib/core/creator/clone.py
-purpose: Orchestrator for cloning the protolib template into a new project.
-description: Collects inputs. Copies tree. Transforms files. Pins Python. Syncs deps. Gates.
+description: >-
+  Orchestrates the cloning of the protolib template into a new project by collecting inputs,
+  copying the tree, and transforming files. Builds text-replacement and rename rules from
+  old to new identity mappings. Validates user-supplied port and Python version before execution.
+  Consumed by the CLI entry point to generate a new project instance.
+tags:
+- cli
+- infra
+- staging
 """
 import importlib, os, re, shutil, subprocess, sys
 from colorama import Fore
@@ -26,8 +33,8 @@ class CloneParams:
     KEYS = ("pr_name", "pg_name", "alias", "port")
 
     def __init__(self, *args, old: dict, new: dict, **kwargs):
-        self.old = self._norm(mapping=old)
-        self.new = self._norm(mapping=new)
+        self.old = self._norm(*args, mapping=old, **kwargs)
+        self.new = self._norm(*args, mapping=new, **kwargs)
 
     @staticmethod
     def _norm(*args, mapping: dict, **kwargs) -> dict:
@@ -39,7 +46,7 @@ class CloneParams:
     def from_settings(cls, source_settings, *args, new_pr_name, new_pg_name,
                       new_alias=None, new_port=None, **kwargs):
         """
-        purpose: Build params from source settings; new_* args specify the clone's identity.
+        description: Build params from source settings; new_* args specify the clone's identity.
         """
         old = {"pr_name": source_settings.project_name,
                "pg_name": source_settings.package_name,
@@ -51,13 +58,13 @@ class CloneParams:
 
     def text_repls(self, *args, **kwargs) -> dict:
         """
-        purpose: Build text-replacement dict (with case variants) from old to new.
+        description: Build text-replacement dict (with case variants) from old to new.
         """
         repls = {}
         for key in self.KEYS:
             old_val, new_val = self.old.get(key), self.new.get(key)
             if old_val and new_val is not None:
-                self._add_case_variants(repls=repls, old=old_val, new=new_val)
+                self._add_case_variants(*args, repls=repls, old=old_val, new=new_val, **kwargs)
         return repls
 
     @staticmethod
@@ -71,7 +78,7 @@ class CloneParams:
 
     def file_rules(self, *args, **kwargs) -> dict:
         """
-        purpose: Build file/dir rename rules from old to new (skipping None values).
+        description: Build file/dir rename rules from old to new (skipping None values).
         """
         keys = ("pr_name", "pg_name", "alias")
         return {self.old[k]: self.new[k] for k in keys
@@ -80,63 +87,60 @@ class CloneParams:
 
 class Validator:
     """
-    purpose: Validates user-supplied port and python version before clone runs.
+    description: Validates user-supplied port and python version before clone runs.
     """
 
     def __init__(self, *args, py_versions: PythonVersions = None, **kwargs):
-        self.pv = py_versions or PythonVersions()
+        self.pv = py_versions or PythonVersions(*args, **kwargs)
 
-    def check(self, *args, port=None, py_version=None, install=False,
-              new_alias=None, **kwargs):
-        self._check_port(port=port)
-        self._check_py(py_version=py_version, install=install)
-        self._check_alias(new_alias=new_alias)
+    def check(self, *args, **kwargs):
+        self._check_port(*args, **kwargs)
+        self._check_py(*args, **kwargs)
+        self._check_alias(*args, **kwargs)
 
     @staticmethod
     def _check_port(*args, port=None, **kwargs) -> None:
-        if port is None: _exit_red("Error: --port is required (e.g., --port 9006).")
+        if port is None: _exit_red("Error: --port is required (e.g., --port 9006).", *args, **kwargs)
         try:
             if not (1 <= int(port) <= 65535): raise ValueError
-        except Exception: _exit_red(f"Error: invalid --port '{port}'. Use 1..65535.")
+        except Exception: _exit_red(f"Error: invalid --port '{port}'. Use 1..65535.", *args, **kwargs)
 
     @staticmethod
     def _check_alias(*args, new_alias=None, **kwargs) -> None:
         if new_alias and len(new_alias) < 3:
-            _exit_red(f"Error: --new_alias '{new_alias}' too short (need \u22653 chars).")
+            _exit_red(f"Error: --new_alias '{new_alias}' too short (need \u22653 chars).", *args, **kwargs)
 
-    def _check_py(self, *args, py_version=None, install=False, **kwargs):
+    def _check_py(self, *args, **kwargs):
+        self._check_py_format(*args, **kwargs)
+
+    def _check_py_format(self, *args, py_version=None, install=False, **kwargs) -> None:
         if install and py_version is None:
-            _exit_red("Error: Python version (-p) required with --install.")
-        if py_version is not None: self._check_py_format(py_version=py_version)
-
-    def _check_py_format(self, *args, py_version: str, **kwargs) -> None:
+            _exit_red("Error: Python version (-p) required with --install.", *args, **kwargs)
+        if py_version is None: return
         if not re.match(r'^\d+\.\d+(\.\d+)?$', py_version):
-            _exit_red(f"Error: Invalid Python version: '{py_version}'.")
+            _exit_red(f"Error: Invalid Python version: '{py_version}'.", *args, **kwargs)
         avail = set(self.pv.all())
         mm = ".".join(py_version.split(".")[:2])
         if py_version not in avail and mm not in avail:
-            _exit_red(f"Error: Python '{py_version}' not found.")
+            _exit_red(f"Error: Python '{py_version}' not found.", *args, **kwargs)
 
 
 class CloneUI:
     """
-    purpose: 'Handles user interaction: input prompts, confirmation, safety check.'
+    description: 'Handles user interaction: input prompts, confirmation, safety check.'
     """
 
-    def collect(self, *args, tgt_dir=None, new_pr_name=None, new_pg_name=None,
-                new_alias=None, yes=False, **kwargs):
-        td, pg = self._collect_inputs(tgt_dir=tgt_dir, new_pg_name=new_pg_name)
-        pr = self._resolve_pr_name(new_pr_name=new_pr_name, new_pg_name=pg, yes=yes)
+    def collect(self, *args, new_alias=None, yes=False, **kwargs):
+        td, pg = self._collect_inputs(*args, **kwargs)
+        kwargs.update({'new_pg_name': pg, 'new_alias': new_alias, 'yes': yes})
+        pr = self._resolve_pr_name(*args, **kwargs)
         path = os.path.abspath(os.path.join(td, pr))
-        if not yes: self._confirm_or_exit(path=path, new_pg_name=pg, new_alias=new_alias)
-        self._safety_check(path=path)
+        if not yes: self._confirm_or_exit(*args, path=path, **kwargs)
+        self._safety_check(*args, path=path, **kwargs)
         return os.path.abspath(td), pr, pg, new_alias
 
-    def _resolve_pr_name(self, *args, new_pr_name, new_pg_name, yes, **kwargs):
-        if (new_pr_name is None or new_pr_name == new_pg_name) and not yes:
-            new_pr_name = self._prompt_pr_name(new_pr_name=new_pr_name,
-                                               new_pg_name=new_pg_name)
-        return new_pr_name if new_pr_name is not None else new_pg_name
+    def _resolve_pr_name(self, *args, **kwargs):
+        return self._prompt_pr_name(*args, **kwargs)
 
     @staticmethod
     def _ask(question, *args, **kwargs) -> str:
@@ -152,23 +156,25 @@ class CloneUI:
         return tgt_dir, new_pg_name
 
     @staticmethod
-    def _prompt_pr_name(*args, new_pr_name=None, new_pg_name=None, **kwargs):
-        prompt = (f"\n{Fore.YELLOW}READ THIS:{Fore.RESET}\nPackage: '{new_pg_name}', "
-                  f"Project dir: '{new_pr_name}'."
-                  "\nEnter new project directory name (or Enter to keep): ")
-        user = input(prompt).strip()
-        return user if user else (new_pr_name if new_pr_name is not None else new_pg_name)
+    def _prompt_pr_name(*args, new_pr_name=None, new_pg_name=None, yes=False, **kwargs):
+        if (new_pr_name is None or new_pr_name == new_pg_name) and not yes:
+            prompt = (f"\n{Fore.YELLOW}READ THIS:{Fore.RESET}\nPackage: '{new_pg_name}', "
+                      f"Project dir: '{new_pr_name}'."
+                      "\nEnter new project directory name (or Enter to keep): ")
+            user = input(prompt).strip()
+            new_pr_name = user if user else new_pr_name
+        return new_pr_name if new_pr_name is not None else new_pg_name
 
     @staticmethod
     def _confirm_or_exit(*args, path, new_pg_name, new_alias=None, **kwargs):
         msg = (f"\n{Fore.CYAN}Create project:{Fore.RESET}\n  Dir: {path}\n"
                f"  Pkg: {new_pg_name}\n  Alias: {new_alias or 'N/A'}\nContinue? [Y/n]: ")
-        if input(msg).strip().lower() == "n": _exit_red("Canceled.")
+        if input(msg).strip().lower() == "n": _exit_red("Canceled.", *args, **kwargs)
 
     @staticmethod
     def _safety_check(*args, path: str, **kwargs) -> None:
         if 'protolib' in path and 'protolib' not in os.path.abspath(sts.project_dir):
-            _exit_red(f"Safety check: Target appears related to 'protolib'. Target: {path}")
+            _exit_red(f"Safety check: Target appears related to 'protolib'. Target: {path}", *args, **kwargs)
 
     @staticmethod
     def print_params(*args, new_pr_name=None, new_pg_name=None, new_alias=None,
@@ -188,22 +194,22 @@ class CloneUI:
 
 class Cloner:
     """
-    purpose: 'Orchestrates the full clone workflow: copy, transform, set version, install.'
+    description: 'Orchestrates the full clone workflow: copy, transform, set version, install.'
     """
 
     def __init__(self, src_dir: str, *args, verbose: int = 0, source_settings=None, **kwargs):
         self.src_dir = src_dir
         self.verbose = verbose
-        self.source_settings = source_settings or self._load_source_settings()
+        self.source_settings = source_settings or self._load_source_settings(*args, **kwargs)
 
     @staticmethod
     def _load_source_settings(*args, **kwargs):
-        """purpose: Dynamically load the app-layer settings of the running package."""
+        """description: Dynamically load the app-layer settings of the running package."""
         return importlib.import_module(f"{sts.package_name}.app.settings")
 
     def copy_project(self, tgt_dir: str, new_pr_name: str, *args, **kwargs) -> str:
         """
-        purpose: Copy src_dir to tgt_dir/new_pr_name, skipping configured ignore_dirs.
+        description: Copy src_dir to tgt_dir/new_pr_name, skipping configured ignore_dirs.
         """
         dest = os.path.join(tgt_dir, new_pr_name)
         if self.verbose >= 1:
@@ -214,38 +220,38 @@ class Cloner:
         return dest
 
     @staticmethod
-    def _ignore(directory, names, *args, **kwargs) -> set:
+    def _ignore(*args, **kwargs) -> set:
         """
-        purpose: 'shutil.copytree ignore: skip ignore_dirs entries by basename.'
+        description: 'shutil.copytree ignore: skip ignore_dirs entries by basename.'
         """
-        return {n for n in names if n in sts.ignore_dirs}
+        return {n for n in args[1] if n in sts.ignore_dirs}
 
     def transform(self, project_path, params, *args, py_version=None, **kwargs):
-        tx = TreeTransformer(project_path, ignore_dirs=sts.ignore_dirs, verbose=self.verbose)
+        tx = TreeTransformer(project_path, *args, ignore_dirs=sts.ignore_dirs, verbose=self.verbose, **kwargs)
         tx.restructure(params.file_rules())
         tx.rewrite(params.text_repls())
         tx.set_pyproject_version(os.path.join(project_path, 'pyproject.toml'), py_version)
 
-    def setup(self, project_path, *args, install=False, py_version=None, **kwargs):
+    def setup(self, project_path, *args, install=False, **kwargs):
         if not install:
-            self._skip_install(project_path=project_path)
+            self._skip_install(project_path, *args, **kwargs)
             return
         if self.verbose >= 1:
             print(f"{Fore.CYAN}\nInstalling project environment using uv...{Fore.RESET}")
-        self._run_uv_sync(project_path=project_path, py_version=py_version)
+        self._run_uv_sync(project_path, *args, **kwargs)
 
-    def _skip_install(self, *args, project_path, **kwargs):
+    def _skip_install(self, project_path, *args, **kwargs):
         if self.verbose < 1: return
         note = f"Skipping install. Run 'uv sync' in '{project_path}'."
         print(f"{Fore.GREEN}\n{note}{Fore.RESET}")
 
-    def _run_uv_sync(self, *args, project_path: str, py_version: str = None, **kwargs) -> None:
-        cmd = self._uv_cmd(py_version=py_version)
+    def _run_uv_sync(self, project_path, *args, **kwargs) -> None:
+        cmd = self._uv_cmd(*args, **kwargs)
         if self.verbose >= 1:
             print(f"{Fore.YELLOW}Now running:{Fore.RESET} {' '.join(cmd)} in {project_path}")
-        self._exec_uv(cmd=cmd, project_path=project_path)
+        self._exec_uv(cmd, project_path, *args, **kwargs)
 
-    def _exec_uv(self, *args, cmd, project_path, **kwargs):
+    def _exec_uv(self, cmd, project_path, *args, **kwargs):
         try: subprocess.check_call(cmd, cwd=project_path)
         except subprocess.CalledProcessError as e:
             print(f"{Fore.RED}uv sync failed: {e}{Fore.RESET}")
@@ -260,19 +266,19 @@ class Cloner:
         return cmd
 
     def _post_gate(self, project_path: str, *args, install=False, **kwargs) -> None:
-        """purpose: Run pytest inside the new clone. Skipped when --install is false."""
-        if install: return run_gate(project_path)
+        """description: Run pytest inside the new clone. Skipped when --install is false."""
+        if install: return run_gate(project_path, *args, **kwargs)
         if self.verbose >= 1: print(f"{Fore.YELLOW}Post-gate skipped.{Fore.RESET}")
 
-    def run(self, *args, port=None, py_version=None, install=False, **kwargs):
-        """purpose: Atomic clone workflow (collect, copy, transform, setup, gate)."""
+    def run(self, *args, port=None, **kwargs):
+        """description: Atomic clone workflow (collect, copy, transform, setup, gate)."""
         tgt_dir, pr_name, pg_name, alias = CloneUI().collect(**kwargs)
         params = CloneParams.from_settings(self.source_settings, new_pr_name=pr_name,
             new_pg_name=pg_name, new_alias=alias, new_port=port)
-        project_path = self.copy_project(tgt_dir, pr_name)
-        self.transform(project_path, params, py_version=py_version)
-        self.setup(project_path, install=install, py_version=py_version)
-        self._post_gate(project_path, install=install)
+        project_path = self.copy_project(tgt_dir, pr_name, *args, **kwargs)
+        self.transform(project_path, params, *args, **kwargs)
+        self.setup(project_path, *args, **kwargs)
+        self._post_gate(project_path, *args, **kwargs)
         return project_path
 
 def _exit_red(msg: str, *args, **kwargs) -> None:
@@ -281,18 +287,18 @@ def _exit_red(msg: str, *args, **kwargs) -> None:
 
 def clone_info(*args, **kwargs) -> str:
     """
-    purpose: Return the formatted clone usage banner with installed Python versions.
+    description: Return the formatted clone usage banner with installed Python versions.
     """
-    return PythonVersions().info_string()
+    return PythonVersions(*args, **kwargs).info_string()
 
 def main(*args, port=None, py_version=None, install=False, verbose=0, **kwargs):
-    """purpose: 'Entry point: validate, gate, print params, run clone, done.'"""
+    """description: 'Entry point: validate, gate, print params, run clone, done.'"""
     Validator().check(port=port, py_version=py_version, install=install, **kwargs)
-    run_gate(sts.project_dir)
+    run_gate(sts.project_dir, *args, **kwargs)
     CloneUI.print_params(port=port, **kwargs)
     cloner = Cloner(sts.project_dir, verbose=verbose)
     path = cloner.run(port=port, py_version=py_version, install=install, **kwargs)
-    Clones().add(path)
+    Clones(*args, **kwargs).add(path)
     CloneUI.print_done(path=path)
     return "Clone successful"
 

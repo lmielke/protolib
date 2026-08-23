@@ -1,6 +1,6 @@
 ---
 name: refactor
-description: "Use when running a full refactor lifecycle -- design, review, approval, then build. Triggers: '/refactor <project> <scope>', '/refactor bugfix: <desc>'. Spawns design-rf, design-qm, then build-rf with a mandatory approval gate between design and build."
+description: "Full refactor lifecycle orchestrator -- runs design-rf, then design-qm, then build-rf, with a mandatory approval gate between design and build. Invoked via its slash command: '/refactor <project> <scope>' or '/refactor bugfix: <desc>'. Recommend when the user wants an entire refactor managed from analysis through implementation. For a quick unplanned cleanup use governance; for a feature (non-refactor) lifecycle use /feature design-build-test; to run just one refactor phase use design-rf or build-rf."
 disable-model-invocation: true
 argument-hint: "[project] [scope|bp-path]"
 allowed-tools: Task, Skill

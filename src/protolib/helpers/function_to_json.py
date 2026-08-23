@@ -1,12 +1,14 @@
 """
 script_path: src/protolib/helpers/function_to_json.py
-purpose: >-
-  Introspect Python callables and emit JSON-Schema-style descriptors for use by the
-  protolib registry and client packages.
-description: |-
-  Parses signatures, docstrings, and
-  type annotations to produce machine-readable API contracts. Used by expose_api
-  and the registry introspector. Do not modify in clones — synced from upstream.
+description: >-
+  Introspects Python callables to generate JSON-Schema descriptors for the protolib registry
+  and client packages. It parses function signatures, docstrings, and type annotations into
+  machine-readable API contracts. Serves as the core engine for expose_api and registry introspection
+  tools.
+tags:
+- infra
+- parsing
+- settings
 """
 import inspect, json, os, re, sys, textwrap, types
 from copy import deepcopy
@@ -35,14 +37,14 @@ class BaseSchema:
     example: str = ""
 
     @classmethod
-    def set_fields(cls, main_meth, test_meth, parsed_props, *args, **kwargs):
+    def set_fields(cls, main_meth, parsed_props, *args, test_meth=None, **kwargs):
         return cls(name=main_meth.__qualname__, description=main_meth.__doc__,
                    import_path=main_meth.__module__,
                    module_path=inspect.getmodule(main_meth).__file__,
                    parameters={"type": "object", "properties": parsed_props},
-                   body=cls.get_function_code(main_meth),
-                   returns=cls.handle_returns_inspect(main_meth),
-                   example=cls.get_function_code(test_meth))
+                   body=cls.get_function_code(main_meth, *args, **kwargs),
+                   returns=cls.handle_returns_inspect(main_meth, *args, **kwargs),
+                   example=cls.get_function_code(test_meth, *args, **kwargs) if test_meth else "")
 
     @staticmethod
     def get_function_code(func: Callable, *args, **kwargs) -> str:
@@ -67,7 +69,7 @@ class BaseSchema:
 @dataclass
 class OpenaiSchema:
     """
-    purpose: Minimal schema for OpenAI tool-calling.
+    description: Minimal schema for OpenAI tool-calling.
     """
     name: str = ""
     description: str = ""
@@ -84,10 +86,10 @@ class OpenaiSchema:
         return {n: {k: v for k, v in m.items() if k != "required"} for n, m in props.items()}
 
     @classmethod
-    def set_fields(cls, main_meth, test_meth, parsed_props, *args, **kwargs):
-        required = cls._required(parsed_props)
-        _apply_enum_options(main_meth, parsed_props)
-        clean = cls._clean(parsed_props)
+    def set_fields(cls, main_meth, parsed_props, *args, **kwargs):
+        required = cls._required(parsed_props, *args, **kwargs)
+        _apply_enum_options(main_meth, parsed_props, *args, **kwargs)
+        clean = cls._clean(parsed_props, *args, **kwargs)
         src = textwrap.dedent(inspect.getsource(main_meth).strip())
         return cls(name=main_meth.__qualname__, description=src,
                    parameters={"type": "object", "properties": clean, "required": required},
@@ -136,7 +138,7 @@ class JoSchema:
 
 class FunctionToJson:
 
-    def __init__(self, *args, schemas=None, file_name=None, write=True, verbose=0, **kwargs):
+    def __init__(self, *args, schemas=None, file_name=None, **kwargs):
         self.schemas = schemas or set()
         self.file_name = file_name
         self.asts = {}
@@ -144,9 +146,10 @@ class FunctionToJson:
     def __call__(self, test_meth: Callable, *args, **kwargs) -> Callable:
         @wraps(test_meth)
         def wrapper(*args, **kwargs):
-            main_meth = self._find_method(*self._get_object_names(test_meth))
-            self.get_asts(main_meth, test_meth)
-            self.dump_to_json(main_meth.__module__, main_meth.__name__, *args)
+            _obj = self._get_object_names(test_meth, *args, **kwargs)
+            main_meth = self._find_method(*_obj, *args, **kwargs)
+            self.get_asts(main_meth, test_meth, *args, **kwargs)
+            self.dump_to_json(main_meth.__module__, main_meth.__name__, *args, **kwargs)
             return test_meth(*args, **kwargs)
         return wrapper
 
@@ -165,8 +168,9 @@ class FunctionToJson:
         return getattr(found_class, mth_name.replace('test_', ''), None)
 
     def get_asts(self, *args, **kwargs) -> dict[str, dict]:
-        meth_props = self.read_signature(*args)
-        self.asts['base'] = BaseSchema.set_fields(*args, meth_props).to_dict()
+        meth_props = self.read_signature(*args, **kwargs)
+        tm = args[1] if len(args) > 1 else None
+        self.asts['base'] = BaseSchema.set_fields(args[0], meth_props, test_meth=tm).to_dict()
         self.asts['execution'] = ExecutionInfo.set_fields(*args).to_dict()
         self._resolve_schemas(*args, meth_props=meth_props, **kwargs)
 
@@ -175,7 +179,7 @@ class FunctionToJson:
             sch = getattr(sys.modules[__name__], f"{schema.capitalize()}Schema", None)
             if not sch:
                 raise AttributeError(f"Schema class '{schema}' not found.")
-            self.asts[schema] = sch.set_fields(*args, deepcopy(meth_props)).to_dict()
+            self.asts[schema] = sch.set_fields(args[0], deepcopy(meth_props), *args[1:]).to_dict()
 
     @staticmethod
     def read_signature(func: Callable, *args, **kwargs) -> dict[str, dict[str, object]]:
@@ -183,13 +187,13 @@ class FunctionToJson:
         for name, p in inspect.signature(func).parameters.items():
             if name in {"self", "cls"} or p.kind in (p.VAR_POSITIONAL, p.VAR_KEYWORD):
                 continue
-            props[name] = _param_schema(p)
+            props[name] = _param_schema(p, *args, **kwargs)
         return props
 
     def dump_to_json(self, dot_import: str, m_name: str, write: bool, *args, **kwargs) -> None:
         if not write:
             return
-        file_name = self._resolve_filename(dot_import, m_name)
+        file_name = self._resolve_filename(dot_import, m_name, *args, **kwargs)
         path = os.path.join(sts.apis_json_dir, file_name)
         with open(path, "w") as f:
             f.write(json.dumps(self.asts, indent=4, default=_default_serializer))
@@ -203,7 +207,7 @@ class FunctionToJson:
         args_section = re.search(r'Args:\n\s+(.*?)(\n\n|\Z)', docstring or '', re.DOTALL)
         if not args_section:
             return {}
-        return _parse_arg_lines(args_section.group(1))
+        return _parse_arg_lines(args_section.group(1), *args, **kwargs)
 
 
 # ---------- module-level helpers ----------
@@ -231,9 +235,9 @@ def _parse_arg_lines(args_text, *args, **kwargs):
     for line in args_text.split('\n'):
         line = line.strip()
         if line.startswith('- '):
-            current, opts_found = _handle_option(result, current, line)
+            current, opts_found = _handle_option(result, current, line, *args, **kwargs)
         else:
-            current, opts_found = _handle_arg(result, current, opts_found, line)
+            current, opts_found = _handle_arg(result, current, opts_found, line, *args, **kwargs)
     return result
 
 def _handle_option(result, current, line, *args, **kwargs):

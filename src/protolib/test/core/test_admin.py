@@ -1,6 +1,13 @@
 """
 script_path: src/protolib/test/core/test_admin.py
-purpose: "Integration tests for core/admin.py — AdminDispatcher routing."
+description: >-
+  Verifies AdminDispatcher routing logic by asserting that known commands resolve to their
+  specific handler methods. Confirms that unknown commands trigger a SystemExit and that the
+  dispatch method invokes the resolved handler. Serves as the integration test suite for the
+  core admin module.
+tags:
+- cli
+- testing
 """
 import sys
 import unittest

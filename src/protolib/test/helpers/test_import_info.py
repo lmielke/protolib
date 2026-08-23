@@ -1,7 +1,15 @@
 """
 script_path: src/protolib/test/helpers/test_import_info.py
-purpose: "Integration tests for helpers/import_info.py — PackageInfo graph builder."
-update_rules: "Append scenarios. Never remove existing tests."
+description: >-
+  Runs integration tests for the PackageInfo graph builder in protolib.helpers.import_info.
+  Validates root directory detection, file location, module path resolution, and import parsing.
+  Exercises recursive graph construction and file selection logic. Consumes test helpers and
+  settings to verify package dependency mapping.
+tags:
+- infra
+- parsing
+- testing
+update_rules: Append scenarios. Never remove existing tests.
 """
 import os, unittest
 import protolib.test.core.helpers as testhelper

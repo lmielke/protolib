@@ -1,7 +1,14 @@
 """
 script_path: src/protolib/test/helpers/test_tree.py
-purpose: "Integration tests for helpers/tree.py — Tree class and helpers."
-update_rules: "Append scenarios. Never remove existing tests."
+description: >-
+  Provides integration tests for the Tree class and its helper functions within the protolib
+  package. Validates initialization defaults, pattern matching logic, and directory traversal
+  behavior. Ensures file content loading and colorization utilities operate correctly under
+  various verbosity settings.
+tags:
+- parsing
+- testing
+update_rules: Append scenarios. Never remove existing tests.
 """
 import os, unittest
 import protolib.test.core.helpers as testhelper

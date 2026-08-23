@@ -1,10 +1,14 @@
 """
 script_path: src/protolib/helpers/dir_context.py
-purpose: Single source of truth about a path within a project tree.
-description: |-
-  DirContext resolves workspace (project/package), optional file facets,
-  and can emit legacy kwargs flags. Constructed from a path via __post_init__
-  or the classmethod __call__.
+description: >-
+  DirContext resolves a file path into workspace, project, and package boundaries using marker
+  files like pyproject.toml. It extracts AST symbols such as class and method names at a given
+  cursor position. The dataclass emits legacy keyword arguments and snapshots for downstream
+  tooling that needs project-relative context.
+tags:
+- infra
+- parsing
+- settings
 update_rules: Do not modify in clones.
 """
 from __future__ import annotations
@@ -48,58 +52,59 @@ class DirContext:
     def __post_init__(self, *args, **kwargs):
         if self.path is None:
             return
-        abs_path = self._abs_path(self.path)
+        abs_path = self._abs_path(self.path, *args, **kwargs)
         self._resolve_workspace(abs_path, *args, **kwargs)
         self._resolve_file(abs_path, *args, **kwargs)
         self._resolve_names(*args, **kwargs)
 
     def _resolve_workspace(self, abs_path, *args, **kwargs):
-        self.work_dir = self._derive_work_dir(abs_path)
-        self.project_dir = self._find_root(self.work_dir, self.project_key)
+        self.work_dir = self._derive_work_dir(abs_path, *args, **kwargs)
+        self.project_dir = self._find_root(self.work_dir, self.project_key, *args, **kwargs)
         self.package_dir = self._find_package_dir(
-            self.project_dir or self.work_dir, self.package_key)
+            self.project_dir or self.work_dir, self.package_key, *args, **kwargs)
         self.is_package = self.package_dir is not None
 
     def _resolve_file(self, abs_path, *args, **kwargs):
-        self.file_path, self.file_name, self.file_dir = self._file_facet(abs_path)
-        self.class_name, self.method_name = self._ast_symbols(self.file_path, self.cursor_pos)
+        self.file_path, self.file_name, self.file_dir = self._file_facet(abs_path, *args, **kwargs)
+        self.class_name, self.method_name = self._ast_symbols(
+            self.file_path, self.cursor_pos, *args, **kwargs)
         self.is_test_file = bool(self.file_name and self.file_name.startswith("test"))
-        self.import_path = self._import_path(self.file_path, self.project_dir)
-        self.test_cmd = self._test_cmd(self.file_path, self.project_dir)
+        self.import_path = self._import_path(self.file_path, self.project_dir, *args, **kwargs)
+        self.test_cmd = self._test_cmd(self.file_path, self.project_dir, *args, **kwargs)
 
     def _resolve_names(self, *args, **kwargs):
-        self.pr_name = self._pkg_name(self.project_dir, self.is_package)
-        self.pg_name = self._pkg_name(self.package_dir, self.is_package)
+        self.pr_name = self._pkg_name(self.project_dir, self.is_package, *args, **kwargs)
+        self.pg_name = self._pkg_name(self.package_dir, self.is_package, *args, **kwargs)
 
     # ---------- factories ----------
     @classmethod
     def __call__(cls, *args, path=None, cursor_pos=None, **kwargs):
-        abs_path = cls._abs_path(path)
-        work_dir = cls._derive_work_dir(abs_path)
-        project_dir = cls._find_root(work_dir, cls.project_key)
-        pkg_dir = cls._find_package_dir(project_dir or work_dir, cls.package_key)
-        fp, fn, fd = cls._file_facet(abs_path)
-        cn, mn = cls._ast_symbols(fp, cursor_pos)
+        abs_path = cls._abs_path(path, *args, **kwargs)
+        work_dir = cls._derive_work_dir(abs_path, *args, **kwargs)
+        project_dir = cls._find_root(work_dir, cls.project_key, *args, **kwargs)
+        pkg_dir = cls._find_package_dir(project_dir or work_dir, cls.package_key, *args, **kwargs)
+        fp, fn, fd = cls._file_facet(abs_path, *args, **kwargs)
+        cn, mn = cls._ast_symbols(fp, cursor_pos, *args, **kwargs)
         is_pkg = pkg_dir is not None
-        return cls._build(work_dir, project_dir, pkg_dir, is_pkg, fp, fn, fd, cn, mn)
+        return cls._build(work_dir, project_dir, pkg_dir, is_pkg, fp, fn, fd, cn, mn, *args, **kwargs)
 
     @classmethod
     def _build(cls, work_dir, project_dir, pkg_dir, is_pkg, fp, fn, fd, cn, mn,
                *args, **kwargs):
         """
-        purpose: Assemble DirContext instance from resolved components.
+        description: Assemble DirContext instance from resolved components.
         """
-        extras = cls._derived(project_dir, pkg_dir, fp, fn, is_pkg)
+        extras = cls._derived(project_dir, pkg_dir, fp, fn, is_pkg, *args, **kwargs)
         return cls(work_dir=work_dir, project_dir=project_dir, package_dir=pkg_dir,
                    is_package=is_pkg, file_path=fp, file_name=fn, file_dir=fd,
                    class_name=cn, method_name=mn, **extras)
 
     @classmethod
     def _derived(cls, project_dir, pkg_dir, fp, fn, is_pkg, *args, **kwargs):
-        return {"pr_name": cls._pkg_name(project_dir, is_pkg),
-                "pg_name": cls._pkg_name(pkg_dir, is_pkg),
-                "import_path": cls._import_path(fp, project_dir),
-                "test_cmd": cls._test_cmd(fp, project_dir),
+        return {"pr_name": cls._pkg_name(project_dir, is_pkg, *args, **kwargs),
+                "pg_name": cls._pkg_name(pkg_dir, is_pkg, *args, **kwargs),
+                "import_path": cls._import_path(fp, project_dir, *args, **kwargs),
+                "test_cmd": cls._test_cmd(fp, project_dir, *args, **kwargs),
                 "is_test_file": bool(fn and fn.startswith("test"))}
 
     # ---------- public API ----------
@@ -109,7 +114,7 @@ class DirContext:
         if self.is_package:
             out.update({k: True for k in package_info})
         else:
-            self._to_kwargs_fallback(out, package_info, verbose)
+            self._to_kwargs_fallback(out, package_info, verbose, *args, **kwargs)
         return out
 
     def _to_kwargs_fallback(self, out, package_info, verbose, *args, **kwargs):

@@ -1,13 +1,14 @@
 """
 script_path: src/protolib/helpers/tree.py
-purpose: >-
-  Tree builder that walks a project directory, collects matched files, and optionally
-  dumps content.
-description: |-
-  Minimal, consistent tree builder that honors sts.* settings:
-  ignore_dirs (with globs), abrev_dirs, ignore_files (verbosity thresholds).
-  Collects matched files and optionally dumps contents by verbosity level.
-  Colorization is optional and isolated via _colorize.
+description: >-
+  Builds a project directory tree by walking the file system and collecting matched files
+  based on configuration settings. It honors ignore rules and verbosity thresholds to filter
+  output and optionally dumps file contents. The class returns a structured dictionary containing
+  the tree hierarchy, file matches, and loaded content for downstream consumption.
+tags:
+- cli
+- parsing
+- settings
 update_rules: Do not modify in clones.
 """
 
@@ -37,8 +38,8 @@ class Tree:
     TREE_HEADER = "## Hierarchy"
     CONTENTS_HEADER = "## File Contents"
 
-    def __init__(self, *args, style="default", **kwargs):
-        self._apply_style(*args, style=style, **kwargs)
+    def __init__(self, *args, **kwargs):
+        self._apply_style(*args, **kwargs)
         self.indent = "    "
         self.matched_files = []
         self.loaded_files = []
@@ -60,14 +61,14 @@ class Tree:
     def handle_verbosity(self, *args, verbose=0, yes=False, **kwargs):
         if yes or verbose < 7:
             return verbose
-        return self._ask_verbosity(*args, verbose=verbose, **kwargs)
+        return self._ask_verbosity(*args, **kwargs) or verbose
 
-    def _ask_verbosity(self, *args, verbose=0, **kwargs):
-        msg = (f"{Fore.YELLOW}WARNING: {verbose = } "
-               f"Output might excede the console length!{Style.RESET_ALL}\n")
+    def _ask_verbosity(self, *args, **kwargs):
+        msg = (f"{Fore.YELLOW}WARNING: high verbosity — "
+               f"output might excede the console length!{Style.RESET_ALL}\n")
         sys.stderr.write(msg)
         cont = input("Continue? [1..N, ENTER keeps current]: ")
-        return int(cont) if cont.isdigit() else verbose
+        return int(cont) if cont.isdigit() else None
 
     def _apply_style(self, *args, style="default", **kwargs):
         st = styles_dict.get(style, styles_dict["default"])
@@ -77,13 +78,12 @@ class Tree:
 
     # --- public API ----------------------------------------------------------
 
-    def mk_tree(self, *args, project_dir=None, max_depth=6, ignores=None,
-                colorized=False, **kwargs):
-        self._reset_buffers()
-        prj = self._resolve_project_dir(*args, project_dir=project_dir, **kwargs)
+    def mk_tree(self, *args, max_depth=6, ignores=None, **kwargs):
+        self._reset_buffers(*args, **kwargs)
+        prj = self._resolve_project_dir(*args, **kwargs)
         ign = set(ignores) if ignores else set(getattr(sts, "ignore_dirs", set()))
         self._walk(prj, ign, max_depth, *args, **kwargs)
-        self._finalize(*args, colorized=colorized, **kwargs)
+        self._finalize(*args, **kwargs)
         return "\n".join(self._out), "\n".join(self._contents)
 
     def _reset_buffers(self, *args, **kwargs):
@@ -105,11 +105,11 @@ class Tree:
             level, sub = root.count(os.sep) - base, os.path.basename(root)
             ind = self.indent * level
             self._out.append(f"{ind}{self.dir_sym}{self.fold_sym} {sub}")
-            if self._truncate_if_skipped(sub, ign, level, max_depth, dirs, ind): continue
+            if self._truncate_if_skipped(sub, ign, level, max_depth, dirs, ind, *args, **kwargs): continue
             self._emit_files(root, files, ind, level, *args, **kwargs)
 
     def _truncate_if_skipped(self, sub, ign, level, max_depth, dirs, ind, *args, **kwargs):
-        skip = self._is_ignored(sub, ign) or (max_depth is not None and level >= max_depth)
+        skip = self._is_ignored(sub, ign, *args, **kwargs) or (max_depth is not None and level >= max_depth)
         if skip:
             dirs[:] = []
             self._out.append(f"{ind}{self.indent}{self.dir_disc_sym}")

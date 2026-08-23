@@ -1,81 +1,95 @@
 ---
-script_path: /home/lars/repos/protolib/.claude/rules/architecture_python.md
-paths: ["**/*.py"]
-purpose: "Python specialization of pr_architecture.md — concrete layout, resources, tests, code, and docs for Python packages."
-description: "Applied when designing or modifying Python packages under src/. Specialization of the abstract pr_architecture.md contract; sibling to glob_developer_guidelines.md for code-style fundamentals. Cites the py_* governance chain."
-update_rules: "Update requires explicit approval."
+script_path: .claude/rules/architecture_python.md
+description: >-
+  Defines the Python package architecture for protolib and its clones, enforcing an OOP-first
+  design with a strict app versus core boundary. It specifies the src layout, resource tier
+  locations, and test wiring conventions. Agents read it before scaffolding or modifying Python
+  packages; it defers to sibling rules for code style and governance details.
+tags:
+- blueprint
+- infra
+- rule
+update_rules: Update requires explicit approval.
+paths:
+- '**/*.py'
 ---
 
-See also: @rules/architecture.md (abstract base), @rules/developer_guidelines.md (cross-cutting code), @rules/module_gov.md (module skeleton), @rules/def_gov.md (function shape), @rules/code_style_python.md (designer summary), @rules/test_style.md (test playbook), @rules/test_gov.md (test skeleton).
+See also: @rules/architecture.md (abstract base),
+@rules/developer_guidelines.md (cross-cutting code),
+@rules/resources.md (resource tier semantics),
+@rules/code_style_python.md (style rules + gold-standard class),
+@rules/test_style_python.md (test playbook),
+@rules/test_gov.md (governance + def-patterns).
 
 # Python Package Architecture
 
-Python specialization of `pr_architecture.md`. Each section opens with the
-inheritance line; the body carries the Python delta. For abstract contracts,
-read `pr_architecture.md` first.
+OOP-first. Every package starts with classes; functions are reserved for
+stateless helpers. Specialization of `@rules/architecture.md` — read that
+first for the abstract contract.
 
 ## Structure
-inherits `pr_architecture.md` §Structure; delta: `src/<pkg>/` layout with `app/`, `apis/`, `helpers/`, `core/`, `resources/`, `test/` subdirs; **protolib** is the canonical template.
+
+`src/<pkg>/` layout. **protolib** is the canonical template; all clones
+(`bridge`, `speaker`, `whisker`, …) inherit it via `proto clone -i <name>`.
 
 ```
 src/<pkg>/
-├── app/             # entry points; top-level orchestration
+├── app/             # entry points; user-owned in clones
 │   ├── __init__.py
-│   └── <pkg>.py     # main module (imports helpers + apis)
+│   └── <pkg>.py     # main module — orchestrates helpers + apis
 ├── apis/            # outward-facing surface (HTTP, CLI subcommands)
-├── helpers/         # stateless utilities, shared across app/apis
-├── core/            # framework boundary — settings, contracts, framework code
+├── helpers/         # stateless utilities — sync-owned by protolib
+├── core/            # framework boundary — sync-owned by protolib
 │   ├── settings.py
-│   └── resources/   # static atomic resource files (yml, json, templates)
+│   └── resources/   # static atomic files (yml, json, templates)
 └── test/            # mirrors module tree (test_<module>.py per module)
-    └── core/        # test framework boundary
-        └── helpers/ # test utilities (testhelper.py, etc.)
+    └── core/
+        └── helpers/ # testhelper.py, gov/, setup decorators
 ```
 
-New packages: `proto clone -i <name>` (never scaffold manually). Existing
-packages must follow the protolib template; deviations require explicit
-justification.
+**app vs core:** `app/` is package-specific business logic — clones own and
+modify it freely. `core/` and `helpers/` are framework code — kept in sync
+with protolib via `proto-admin sync`. Never scaffold a package by hand.
+
+Respect __Seperation of Concern__ and __Subsidiarity__! 
+Clear seperation between frontend (presentation) from backend (logic and processing). Seperation of Code and Fixtures (Ressources). Subsidiarity of objects (local vs. global).
 
 ## Resources
-inherits `pr_architecture.md` §Resources; delta: `settings.py` for static params (extension `.py`), `core/resources/` for static atomic files, `~/.<pkg>/setup.yml` for user-dynamic, `~/.<pkg>/resources/` for user-dynamic files, `/etc/environment` for secrets.
 
-|  Tier             |  Location                          |  Mutability       |  Format       |
-| ----------------- | ---------------------------------- | ----------------- | ------------- |
-| package-static    | `src/<pkg>/core/settings.py`       | static            | `.py`         |
-| package-static    | `src/<pkg>/core/resources/`        | static            | `.yml/.json`  |
-| app-static        | `src/<pkg>/app/settings.py`        | static            | `.py`         |
-| app-static        | `src/<pkg>/app/resources/`         | static            | `.yml/.json`  |
-| user-dynamic      | `~/.<pkg>/setup.yml`               | user-editable     | `.yml`        |
-| user-dynamic      | `~/.<pkg>/resources/`              | user-editable     | `.yml/.json`  |
-| system-secret     | `/etc/environment`                 | host-managed      | shell env     |
+Per @rules/resources.md, with the Python tier table:
 
-Use `sts.<param>` import style: `from <pkg> import settings as sts`. Never
-duplicate constants — single source of truth in `settings.py`.
+| Tier            | Location                                    | Format       |
+| --------------- | ------------------------------------------- | ------------ |
+| package-static  | `src/<pkg>/core/settings.py`                | `.py`        |
+| package-static  | `src/<pkg>/core/resources/`                 | `.yml/.json` |
+| user-dynamic    | `~/.<pkg>/settings.yml` | `.yml/.json` |
+| user-dynamic    | `~/repos/<pkg>/src/<pkg>/app/resources`  | `.yml/.json` |
+| system-secret   | `/etc/environment`                          | shell env    |
+
+Use `from <pkg> import settings as sts` — never duplicate constants.
 
 ## Tests
-inherits `pr_architecture.md` §Tests; delta: `uv run pytest`; tests in `src/<pkg>/test/test_<module>.py`; `testhelper.@test_setup` decorator for fixtures; governance suite in `test/core/test_governance.py`.
 
-- Per-module IT: every `app/foo.py` has `test/app/test_foo.py` (governance c18).
-- Test framework: `pytest` (also runs `unittest.TestCase`).
-- No mocks unless unavoidable. Use realistic inputs + `@test_setup`.
-- E2E lives at host level (`~/scripts/testing/*.sh`) per `@rules/testing.md`.
+`uv run pytest`. Per-module IT in `src/<pkg>/test/test_<module>.py`
+(governance `c18` enforces 1:1 pairing). Host-level E2E in
+`~/scripts/testing/*.sh` per @rules/testing.md.
 
-Full playbook: `@rules/test_style.md`. Skeleton: `@rules/test_gov.md`.
+Playbook: @rules/test_style_python.md. Governance: @rules/test_gov.md.
 
 ## Code
-inherits `pr_architecture.md` §Code AND `glob_developer_guidelines.md` (sibling foundation); delta: kwargs forwarding (`*args, **kwargs` everywhere); `c1` (≤7 lines/method); `c11` (≤95 chars/line); strict module/class/function shape.
 
-- Function shape: `@rules/def_gov.md` (12 named refactor patterns).
-- Module skeleton: `@rules/module_gov.md` (docstring, imports, classes).
-- Designer summary: `@rules/code_style_python.md`.
-- Package manager: `uv` only — `uv sync`, `uv run`, `uv add`. Never `pip` directly.
-- Imports: top of file; alphabetical; no in-function imports.
+OOP-first; kwargs-everywhere (`*args, **kwargs` on every signature);
+strict module/class/function shape governed by @rules/test_gov.md.
 
-Mandatory rules (cannot be suppressed): `c1`, `c11`, `c_dfmt`, `c_dscope`, `c_dorph`.
+- Package manager: `uv` only (`uv sync`, `uv run`, `uv add`). No `pip`.
+- Imports at top; alphabetical; no in-function imports.
+- Style + gold-standard class: @rules/code_style_python.md.
 
 ## Docs
-inherits `pr_architecture.md` §Docs; delta: docstring front-matter on every module / class / def with `script_path:`, `purpose:`, optional `description:`, `update_rules:`, `governance_exceptions:`.
 
-- Docstring template: `~/repos/protolib/src/protolib/core/resources/docstring_templates.yml`
+Docstring front-matter on every module / class / def per
+`~/.governance/docstring_templates.yml` (validated by `c_dfmt`,
+`c_dscope`, `c_dorph`).
+
 - README owns user-facing surface; blueprint owns internal end state.
-- Workdocs writeback per `@rules/docs_workflow.md` (`docs ma/pr/ch/ka`).
+- Workdocs writeback (`docs ma/pr/ch/ka`) per @rules/docs_workflow.md.

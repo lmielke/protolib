@@ -1,13 +1,15 @@
 """
 script_path: src/protolib/test/core/test_kwargs.py
-purpose: "AST-based kwargs convention validator. Used as PostToolUse hook."
-description: |
-  Replaces the regex-based shell hook. Reads JSON on stdin with
-  tool_input.file_path, parses the target file with ast, and rejects any
-  FunctionDef / AsyncFunctionDef missing *args or **kwargs.
-
-  Exit codes match the hook protocol: 0 = pass, 2 = block with stderr.
-  Unparseable files pass (syntax errors surface elsewhere).
+description: >-
+  Validates Python function signatures by parsing the target file with the ast module to enforce
+  a strict *args and **kwargs convention. Reads the file path from JSON on stdin and exits
+  with code two to block the tool if violations are found. Serves as a PostToolUse hook that
+  replaces legacy regex-based shell scripts for governance checks.
+tags:
+- governance
+- hook
+- parsing
+- rule
 """
 import ast, json, os, sys
 

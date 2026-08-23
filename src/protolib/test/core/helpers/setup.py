@@ -1,10 +1,15 @@
 """
 script_path: src/protolib/test/core/helpers/setup.py
-purpose: "Temp-file + chdir context managers and @test_setup decorator for tests."
-description: |-
-  Relocated from test/core/testhelper.py. Public API unchanged so that consumer
-  imports keep the `testhelper` alias via `test/core/helpers/__init__.py`.
-update_rules: "Do not modify in clones."
+description: >-
+  Provides context managers and a decorator for test isolation by managing temporary directories
+  and file copies. The temp_chdir function switches the working directory for a block, while
+  temp_test_file copies data files into a temporary structure. The test_setup decorator wraps
+  test methods to apply both mechanisms automatically. Consumed by core test suites requiring
+  isolated file system states.
+tags:
+- infra
+- testing
+update_rules: Do not modify in clones.
 """
 import os, shutil, functools
 from contextlib import contextmanager
@@ -14,7 +19,7 @@ import protolib.app.settings as sts
 
 @contextmanager
 def temp_chdir(tempDataPath, *args, temp_chdir: Path = None, **kwargs) -> None:
-    """purpose: Switch cwd to temp_chdir (or tempDataPath if 'temp_file') for the block."""
+    """description: Switch cwd to temp_chdir (or tempDataPath if 'temp_file') for the block."""
     origin = os.getcwd()
     if temp_chdir == 'temp_file':
         if os.path.isfile(tempDataPath): temp_chdir = os.path.dirname(tempDataPath)
@@ -27,7 +32,7 @@ def temp_chdir(tempDataPath, *args, temp_chdir: Path = None, **kwargs) -> None:
 
 @contextmanager
 def temp_test_file(temp_dir_name: str, *args, temp_file: str, **kwargs) -> None:
-    """purpose: Copy test_data_dir/temp_file into a temp subdir named temp_dir_name."""
+    """description: Copy test_data_dir/temp_file into a temp subdir named temp_dir_name."""
     if temp_file is None: temp_file = 'empty.txt'
     sourcePath = os.path.join(sts.test_data_dir, temp_file)
     assert os.path.isfile(sourcePath), f"file {sourcePath} not found"

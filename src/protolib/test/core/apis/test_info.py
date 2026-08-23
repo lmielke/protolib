@@ -1,7 +1,15 @@
 """
 script_path: src/protolib/test/core/apis/test_info.py
-purpose: "Integration tests for app/apis/info.py — package information API."
-update_rules: "Append scenarios. Never remove existing tests."
+description: >-
+  Runs integration tests for the package information API in protolib.core.apis.info. Verifies
+  that collect_infos accumulates and resets message lists, venv_is_active detects virtual
+  environments in executable paths, and user_info and server_info append their respective
+  sections to the shared state. Consumed by the test suite to validate the info collection
+  logic.
+tags:
+- parsing
+- testing
+update_rules: Append scenarios. Never remove existing tests.
 """
 import unittest
 from protolib.core.apis.info import (

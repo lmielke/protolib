@@ -1,17 +1,16 @@
 """
 script_path: src/protolib/core/apis/register.py
-purpose: >-
-  Outbound registration: sends this service's metadata (host, port, capabilities)
-  to the central registry and prints the result as JSON.
-description: |-
-  Respects the configured
-  registry_url and ttl. Called at startup or on-demand to (re-)announce the service
-  after a restart or configuration change.
-  Usage:
-      proto register
-      proto register --registry_url http://localhost:9000 --ttl 60
+description: >-
+  Sends service metadata, including host, port, and capabilities, to the central registry
+  for outbound registration. Constructs a RegistryClient to execute the announcement and returns
+  a status dictionary containing the service ID and registry state. Consumed by the CLI entry
+  point to announce the service at startup or after configuration changes.
+tags:
+- cli
+- infra
+- settings
 governance_exceptions:
-  - c8: "no class definition — verify OOP intent"
+- c8: no class definition — verify OOP intent
 """
 import json
 import protolib.core.settings as sts
@@ -19,7 +18,7 @@ from protolib.core.registry import RegistryClient
 
 def _do_register(*args, **kwargs) -> dict:
     """
-    purpose: Perform one-shot registration with capabilities and return result dict.
+    description: Perform one-shot registration with capabilities and return result dict.
     """
     client = RegistryClient(*args, **kwargs)
     state = client.register_with_capabilities(*args, **kwargs)
@@ -29,7 +28,7 @@ def _do_register(*args, **kwargs) -> dict:
 
 def main(*args, **kwargs) -> str:
     """
-    purpose: Register this service with the registry and show result.
+    description: Register this service with the registry and show result.
     """
     result = _do_register(*args, **kwargs)
     output = json.dumps(result, indent=2)

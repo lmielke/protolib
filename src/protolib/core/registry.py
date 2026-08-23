@@ -1,10 +1,15 @@
 """
 script_path: src/protolib/core/registry.py
-purpose: Registry connector classes for service discovery and API introspection.
-description: |-
-  RegistryClient  — outbound registration + heartbeat + service discovery.
-  RegistryHost    — passive host that stores service state in a JSON file.
-  ApiIntrospector — scans this package's apis/ directory and returns signatures.
+description: >-
+  Defines RegistryClient, RegistryHost, and ApiIntrospector classes for service discovery
+  and API introspection. The client sends registration and heartbeat payloads to a remote
+  host, while the host stores service state in a JSON file with TTL-based expiration. The
+  introspector scans the local apis directory to extract function signatures for capability
+  reporting. Consumed by protolib packages needing inter-service communication.
+tags:
+- infra
+- parsing
+- settings
 update_rules: Do not modify in clones.
 """
 import importlib, inspect, json, os, socket
@@ -122,7 +127,7 @@ class RegistryHost:
 
     def read_state(self, *args, **kwargs) -> dict:
         with self._lock:
-            state = self._load_state()
+            state = self._load_state(*args, **kwargs)
             state.setdefault("services", {})
             state.setdefault("shared", {})
             return state
@@ -144,7 +149,7 @@ class RegistryHost:
     def register_service(self, sid: str, data: dict, *args, **kwargs) -> dict:
         state = self.read_state(*args, **kwargs)
         if sid.startswith("__shared_"):
-            self._register_shared(state, sid, data)
+            self._register_shared(state, sid, data, *args, **kwargs)
         else:
             self._register_svc(state, sid, data, *args, **kwargs)
         self._write_state(state, *args, **kwargs)
@@ -172,7 +177,7 @@ class RegistryHost:
         last_seen = svc.get("last_seen", "")
         if not last_seen:
             return
-        self._apply_ttl(svc, last_seen, now or self.now)
+        self._apply_ttl(svc, last_seen, now or self.now, *args, **kwargs)
 
     def _apply_ttl(self, svc, last_seen, now: str = None, *args, **kwargs):
         try:
@@ -198,12 +203,12 @@ class RegistryHost:
             self._check_all_ttl(state, *args, **kwargs)
             self._write_state(state, *args, **kwargs)
         except Exception:
-            logprint("sweep error", level="error")
+            logprint("sweep error", *args, level="error", **kwargs)
 
 
 class ApiIntrospector:
     """
-    purpose: Inspects this package's APIs and returns their signatures.
+    description: Inspects this package's APIs and returns their signatures.
     """
 
     def __init__(self, *args, **kwargs):
@@ -214,14 +219,14 @@ class ApiIntrospector:
         for name, p in inspect.signature(func).parameters.items():
             if name in {"self", "cls"} or p.kind in (p.VAR_POSITIONAL, p.VAR_KEYWORD):
                 continue
-            props[name] = _param_schema(p)
+            props[name] = _param_schema(p, *args, **kwargs)
         return props
 
-    def _scan_api_dir(self, *args, apis_dir: str, pkg_prefix: str, apis: dict, **kwargs):
+    def _scan_api_dir(self, *args, apis_dir: str, apis: dict, **kwargs):
         if not os.path.isdir(apis_dir):
             return
         for filename in os.listdir(apis_dir):
-            entry = self._load_api(filename, *args, pkg_prefix=pkg_prefix, **kwargs)
+            entry = self._load_api(filename, *args, **kwargs)
             if entry:
                 apis[entry[0]] = entry[1]
 
@@ -232,13 +237,13 @@ class ApiIntrospector:
                 pkg_prefix=pkg_prefix, apis=apis, **kwargs)
         return apis
 
-    def _load_api(self, filename, *args, pkg_prefix: str, **kwargs):
+    def _load_api(self, filename, *args, **kwargs):
         if not filename.endswith(".py") or filename.startswith(("_", "#")):
             return None
         api_name = os.path.splitext(filename)[0]
         if api_name == "server":
             return None
-        return self._import_api(api_name, *args, pkg_prefix=pkg_prefix, **kwargs)
+        return self._import_api(api_name, *args, **kwargs)
 
     def _import_api(self, api_name, *args, pkg_prefix: str, **kwargs):
         try:

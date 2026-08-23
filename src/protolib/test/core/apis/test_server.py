@@ -1,14 +1,28 @@
 """
 script_path: src/protolib/test/core/apis/test_server.py
-purpose: "Integration tests for core/apis/server.py — HTTP server and API dispatch."
-update_rules: "Append scenarios. Never remove existing tests."
+description: >-
+  Runs integration tests for the core API server module, covering HTTP dispatch and parameter
+  handling. Validates query string casting, parameter building, and content negotiation logic.
+  Verifies API loading rules and JSON serialization behavior. Consumed by the protolib test
+  suite to ensure server stability.
+tags:
+- cli
+- parsing
+- testing
+update_rules: Append scenarios. Never remove existing tests.
 """
 import unittest
 import protolib.core.settings as sts
 from protolib.core.apis.server import (
-    _build_params, _cast_value,
+    _build_params, _cast_value, _strip_ansi,
     ProtoControlHandler,
 )
+
+
+def _stub_handler(path, headers, *args, **kwargs):
+    h = ProtoControlHandler.__new__(ProtoControlHandler)
+    h.path, h.headers = path, headers
+    return h
 
 
 class TestCastValue(unittest.TestCase):
@@ -54,6 +68,58 @@ class TestBuildParams(unittest.TestCase):
         qp = {"key": []}
         result = _build_params(qp)
         assert "key" not in result
+
+    def test_format_key_stripped(self, *args, **kwargs):
+        qp = {"format": ["json"], "name": ["test"]}
+        result = _build_params(qp)
+        assert "format" not in result
+        assert result["name"] == "test"
+
+
+class TestNegotiate(unittest.TestCase):
+    """_negotiate: choose JSON or HTML from ?format override and Accept header."""
+
+    def test_accept_html(self, *args, **kwargs):
+        h = _stub_handler("/info/", {"Accept": "text/html"})
+        assert h._negotiate() == "html"
+
+    def test_accept_json(self, *args, **kwargs):
+        h = _stub_handler("/info/", {"Accept": "application/json"})
+        assert h._negotiate() == "json"
+
+    def test_format_override_beats_accept(self, *args, **kwargs):
+        h = _stub_handler("/info/?format=json", {"Accept": "text/html"})
+        assert h._negotiate() == "json"
+
+    def test_default_is_json(self, *args, **kwargs):
+        h = _stub_handler("/info/", {})
+        assert h._negotiate() == "json"
+
+
+class TestAsJson(unittest.TestCase):
+    """_as_json: wrap API output as a JSON-serializable object."""
+
+    def test_dict_passthrough(self, *args, **kwargs):
+        h = _stub_handler("/", {})
+        assert h._as_json({"a": 1}) == {"a": 1}
+
+    def test_list_passthrough(self, *args, **kwargs):
+        h = _stub_handler("/", {})
+        assert h._as_json([1, 2]) == [1, 2]
+
+    def test_string_wrapped_and_stripped(self, *args, **kwargs):
+        h = _stub_handler("/", {})
+        assert h._as_json("\x1b[31mhi\x1b[0m") == {"result": "hi"}
+
+
+class TestStripAnsi(unittest.TestCase):
+    """_strip_ansi: remove ANSI color escape codes."""
+
+    def test_removes_color_codes(self, *args, **kwargs):
+        assert _strip_ansi("\x1b[1;32mok\x1b[0m") == "ok"
+
+    def test_plain_text_unchanged(self, *args, **kwargs):
+        assert _strip_ansi("plain") == "plain"
 
 
 class TestLoadApis(unittest.TestCase):

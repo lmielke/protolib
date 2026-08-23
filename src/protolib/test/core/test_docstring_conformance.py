@@ -1,9 +1,15 @@
 """
 script_path: src/protolib/test/core/test_docstring_conformance.py
-purpose: >-
-  [TO_DELETE] Pre-flight test: every protolib source module parses as canonical
-  front-matter docstrings (YAML head + required keys per scope).
-update_rules: "Run on every commit. Breaks if a docstring drifts from the template."
+description: >-
+  Validates that every protolib source module contains canonical front-matter docstrings with
+  required YAML keys per scope. Parses AST nodes to extract docstrings and checks them against
+  a loaded schema for allowed and required fields. Flags missing keys, unexpected keys, and
+  script_path mismatches. Runs as a pre-flight test on every commit to prevent docstring drift.
+tags:
+- parsing
+- rule
+- testing
+update_rules: Run on every commit. Breaks if a docstring drifts from the template.
 """
 import ast, os, unittest, yaml
 from pathlib import Path

@@ -1,7 +1,15 @@
 """
 script_path: src/protolib/test/core/apis/test_expose_api.py
-purpose: "Integration tests for app/apis/expose_api.py — API signature export."
-update_rules: "Append scenarios. Never remove existing tests."
+description: >-
+  Runs integration tests for the API signature export function in expose_api.py. Verifies
+  that main returns a valid JSON string containing an id field and an apis dictionary. Confirms
+  the info API entry is present in the exported signatures. Consumed by the protolib test
+  suite to validate core API exposure behavior.
+tags:
+- cli
+- parsing
+- testing
+update_rules: Append scenarios. Never remove existing tests.
 """
 import json, unittest
 from protolib.core.apis.expose_api import main

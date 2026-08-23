@@ -1,13 +1,16 @@
 """
 script_path: src/protolib/app/apis/entry_point.py
-purpose: >-
-  Example API entry point that demonstrates how to wire a new API into the protolib
-  dispatch system.
-description: |-
-  Instantiates DefaultClass and forwards all kwargs
-  transparently. Clone this file and rename when adding application APIs.
+description: >-
+  Serves as a template for wiring new APIs into the protolib dispatch system. Instantiates
+  DefaultClass and forwards all arguments transparently. Injects the package name from settings
+  before returning the instance. Developers clone this file to create new application entry
+  points.
+tags:
+- blueprint
+- cli
+- settings
 governance_exceptions:
-  - c8: "no class definition — verify OOP intent"
+- c8: no class definition — verify OOP intent
 """
 
 import protolib.app.settings as sts
@@ -19,7 +22,7 @@ def entry_point_function(*args, **kwargs):
 
 def main(*args, **kwargs):
     """
-    purpose: All entry points must contain a main function like main(*args, **kwargs)
+    description: All entry points must contain a main function like main(*args, **kwargs)
     """
     return entry_point_function(*args, pg_name=sts.package_name, **kwargs)
 if __name__ == '__main__':

@@ -1,7 +1,15 @@
 """
 script_path: src/protolib/test/helpers/test_dir_context.py
-purpose: "Integration tests for helpers/dir_context.py — DirContext dataclass."
-update_rules: "Append scenarios. Never remove existing tests."
+description: >-
+  Provides integration tests for the DirContext dataclass, covering path resolution, project
+  root discovery, and AST symbol extraction. Validates helper methods like _abs_path and _find_root
+  against expected filesystem behaviors. Consumed by the protolib test suite to ensure directory
+  context logic remains stable.
+tags:
+- infra
+- parsing
+- testing
+update_rules: Append scenarios. Never remove existing tests.
 """
 import ast, os, tempfile, shutil, unittest
 from protolib.helpers.dir_context import DirContext

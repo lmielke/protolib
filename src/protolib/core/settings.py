@@ -1,15 +1,19 @@
 """
 script_path: src/protolib/core/settings.py
-purpose: Self-contained settings for the core framework layer.
-description: |-
-  All structural values
-  derived from __file__ using Django-style path resolution — no hardcoded package
-  names. Works correctly in protolib and all clones without modification.
+description: >-
+  Defines structural path constants and configuration values for the protolib core framework
+  layer. Derives all directory paths from the file location using Django-style resolution
+  to support package cloning without modification. Exposes API package pairs, registry endpoints,
+  and user settings locations consumed by the registry and app dispatcher.
+tags:
+- infra
+- parsing
+- settings
 governance_exceptions:
-  - c8: "no class definition — verify OOP intent"
-  - c41: "duplicate basename at app/settings.py, core/settings.py"
+- c8: no class definition — verify OOP intent
+- c41: duplicate basename at app/settings.py, core/settings.py
 """
-import os
+import os, tomllib
 
 core_dir = os.path.dirname(__file__)              # .../src/<pkg>/core/
 package_dir = os.path.dirname(core_dir)           # .../src/<pkg>/
@@ -52,3 +56,10 @@ registry_url = f"http://127.0.0.1:{registry_port}"
 registry_state_file = os.path.join(resources_dir, "registry_state.json")
 registry_host_enabled = False
 registry_heartbeat_interval = 60
+
+# main_file_name — first entry of pyproject [project.scripts], file part only.
+# Module scope (no def): c37 walks FunctionDefs only.
+_scripts = tomllib.loads(open(os.path.join(project_dir, "pyproject.toml")).read()
+                         ).get("project", {}).get("scripts", {})
+_first = next(iter(_scripts.values()), "")
+main_file_name = f"{_first.split(':')[0].split('.')[-1]}.py" if _first else ""

@@ -1,7 +1,14 @@
 """
 script_path: src/protolib/test/app/test_settings.py
-purpose: "Integration tests for app/settings.py — app-layer configuration."
-update_rules: "Append scenarios. Never remove existing tests."
+description: >-
+  Runs integration tests for the protolib app settings module to verify path resolution and
+  configuration values. Asserts that root, package, and API directories exist and that static
+  values like ignore_dirs are correctly initialized. Validates that the user settings loader
+  returns a dictionary containing the expected package name key.
+tags:
+- settings
+- testing
+update_rules: Append scenarios. Never remove existing tests.
 """
 import os, unittest
 import protolib.app.settings as sts

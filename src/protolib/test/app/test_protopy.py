@@ -1,3 +1,14 @@
+"""
+script_path: src/protolib/test/app/test_protopy.py
+description: >-
+  Executes unit tests for the DefaultClass string representation within the protolib application.
+  Validates that the object correctly formats its internal pg_name attribute into the expected
+  output string. Uses the FunctionToJson decorator to capture test results and schema data
+  for external reporting.
+tags:
+- parsing
+- testing
+"""
 # testcorepy.py
 # C:\Users\lars\python_venvs\packages\protolib\protopy\test\test_ut\testcorepy.py
 

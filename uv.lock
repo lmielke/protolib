@@ -176,6 +176,12 @@ wheels = [
 ]
 
 [[package]]
+name = "governance"
+version = "1.2.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/19/77/751b5e543462519c8af95f77bb641eba565f6f576500abfd8c25c2b996be/governance-1.2.0.tar.gz", hash = "sha256:8d735f03c8a508083c6104b3e9a33c864e12ec03f05bd21be08613db0390db7d", size = 3734, upload-time = "2023-02-28T01:38:45.81Z" }
+
+[[package]]
 name = "graphviz"
 version = "0.21"
 source = { registry = "https://pypi.org/simple" }
@@ -495,6 +501,7 @@ dependencies = [
 [package.dev-dependencies]
 dev = [
     { name = "black" },
+    { name = "governance" },
     { name = "openai" },
     { name = "pre-commit" },
     { name = "pytest" },
@@ -521,6 +528,7 @@ requires-dist = [
 [package.metadata.requires-dev]
 dev = [
     { name = "black" },
+    { name = "governance", specifier = ">=1.2.0" },
     { name = "openai" },
     { name = "pre-commit" },
     { name = "pytest" },
