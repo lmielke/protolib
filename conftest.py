@@ -17,7 +17,6 @@ from pathlib import Path
 
 class SessionTracker:
     """
-    purpose: "Track pytest session results and persist them after the session ends."
     description: "Owns the set of failed node IDs collected during the run and the
       resolved package name read from pyproject.toml at construction time. Two
       public methods serve as targets for the module-level pytest hooks:

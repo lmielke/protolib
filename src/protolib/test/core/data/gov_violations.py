@@ -14,7 +14,7 @@
 #   c35 and c40 are mutually exclusive scopes and cannot co-fire.
 """
 script_path: src/protolib/test/core/data/gov_violations.py
-purpose: "Fixture."
+description: Fixture.
 """
 # c26: relative import (auto-fix target)
 from . import settings as _sts_rel
@@ -55,21 +55,21 @@ def strip_ansi_codes(*args, s, **kwargs):
 
 
 class FirstClass:
-    """purpose: first class."""
+    """description: first class."""
 
     def kwargs_get_violation(self, *args, **kwargs):
-        """purpose: c4 — direct kwargs access forbidden."""
+        """description: c4 — direct kwargs access forbidden."""
         # c4: kwargs.get usage
         x = kwargs.get("x")
         return x
 
     def mutable_default_violation(self, *args, bucket=[], **kwargs):
-        """purpose: c19 — mutable default arg list."""
+        """description: c19 — mutable default arg list."""
         bucket.append(1)
         return bucket
 
     def long_method_violation(self, *args, **kwargs):
-        """purpose: c1 — function body >10 code lines (error-level)."""
+        """description: c1 — function body >10 code lines (error-level)."""
         a = 1
         b = 2
         c = 3
@@ -84,7 +84,7 @@ class FirstClass:
         return a + b + c + d + e + f + g + h + i + j + k
 
     def elif_chain_violation(self, *args, x, **kwargs):
-        """purpose: c14 — more than 3 elif branches."""
+        """description: c14 — more than 3 elif branches."""
         if x == 1:
             return 1
         elif x == 2:
@@ -98,7 +98,7 @@ class FirstClass:
         return 0
 
     def deep_nesting_violation(self, *args, a, b, c, d, e, **kwargs):
-        """purpose: c15 — indent beyond 4 levels (>16 spaces)."""
+        """description: c15 — indent beyond 4 levels (>16 spaces)."""
         if a:
             if b:
                 if c:
@@ -108,23 +108,23 @@ class FirstClass:
         return "shallow"
 
     def semicolon_violation(self, *args, **kwargs):
-        """purpose: c6 — statements joined with ';'."""
+        """description: c6 — statements joined with ';'."""
         a = 1; b = 2
         return a + b
 
     def bare_except_violation(self, *args, **kwargs):
-        """purpose: c28 — bare except."""
+        """description: c28 — bare except."""
         try:
             return int("x")
         except:
             return 0
 
     def eval_violation(self, *args, **kwargs):
-        """purpose: c7 — eval usage."""
+        """description: c7 — eval usage."""
         return eval("1 + 1")
 
     def local_import_violation(self, *args, **kwargs):
-        """purpose: c25 — import inside a def body."""
+        """description: c25 — import inside a def body."""
         import sys
         return sys.path
 
@@ -132,39 +132,39 @@ class FirstClass:
         pass
 
     def raw_print_violation(self, *args, **kwargs):
-        """purpose: c30 — raw print in non-exempt module."""
+        """description: c30 — raw print in non-exempt module."""
         print("raw print — should route through logprint")
 
     def inline_dict_violation(self, *args, **kwargs):
-        """purpose: c36 — inline dict >8 entries inside a def."""
+        """description: c36 — inline dict >8 entries inside a def."""
         big_map = {"a": 1, "b": 2, "c": 3, "d": 4, "e": 5,
                    "f": 6, "g": 7, "h": 8, "i": 9, "j": 10, "k": 11}
         return big_map
 
     def repeated_local_here_one(self, *args, **kwargs):
-        """purpose: c21 — 'bucket_count' also in two peers."""
+        """description: c21 — 'bucket_count' also in two peers."""
         bucket_count = 1
         return bucket_count
 
     def repeated_local_here_two(self, *args, **kwargs):
-        """purpose: c21 — 'bucket_count' continues repeating."""
+        """description: c21 — 'bucket_count' continues repeating."""
         bucket_count = 2
         return bucket_count
 
     def repeated_local_here_three(self, *args, **kwargs):
-        """purpose: c21 — 'bucket_count' triggers repeated-locals warn."""
+        """description: c21 — 'bucket_count' triggers repeated-locals warn."""
         bucket_count = 3
         return bucket_count
 
 
 class SecondClass:
-    """purpose: second class."""
+    """description: second class."""
     label = "second"
 
 
 class ThirdClass:
     """
-    purpose: third class.
+    description: third class.
     governance_exceptions:
       - c3: "module has 309 lines (>300)"
     """
@@ -172,26 +172,26 @@ class ThirdClass:
 
 
 class FourthClass:
-    """purpose: fourth class."""
+    """description: fourth class."""
     label = "fourth"
 
 
 class FifthClass:
-    """purpose: fifth class."""
+    """description: fifth class."""
     label = "fifth"
 
 
 # c8: no __init__ anywhere in this file
 # c12: brings total classes to 7 (>5)
 class SixthClassNoInit:
-    """purpose: c8 — no __init__ declared; c12 — 6th class in this module."""
+    """description: c8 — no __init__ declared; c12 — 6th class in this module."""
     label = "sixth"
 
 
 # c24: only 1 blank line before a top-level class (needs 2)
 
 class SeventhClassTightSpacing:
-    """purpose: c24 — only one blank line before this class (requires two)."""
+    """description: c24 — only one blank line before this class (requires two)."""
     label = "seventh"
 
 
@@ -200,103 +200,103 @@ class SeventhClassTightSpacing:
 
 
 def too_many_blanks_before(*args, **kwargs):
-    """purpose: c24 — three preceding blanks (needs 0 or 1)."""
+    """description: c24 — three preceding blanks (needs 0 or 1)."""
     return 1
 
 
 def padding_one(*args, **kwargs):
-    """purpose: padding to push total line count past 300 for c3."""
+    """description: padding to push total line count past 300 for c3."""
     value_one = 1
     value_two = 2
     return value_one + value_two
 
 
 def padding_two(*args, **kwargs):
-    """purpose: padding to push total line count past 300 for c3."""
+    """description: padding to push total line count past 300 for c3."""
     value_one = 1
     value_two = 2
     return value_one + value_two
 
 
 def padding_three(*args, **kwargs):
-    """purpose: padding to push total line count past 300 for c3."""
+    """description: padding to push total line count past 300 for c3."""
     value_one = 1
     value_two = 2
     return value_one + value_two
 
 
 def padding_four(*args, **kwargs):
-    """purpose: padding to push total line count past 300 for c3."""
+    """description: padding to push total line count past 300 for c3."""
     value_one = 1
     value_two = 2
     return value_one + value_two
 
 
 def padding_five(*args, **kwargs):
-    """purpose: padding to push total line count past 300 for c3."""
+    """description: padding to push total line count past 300 for c3."""
     value_one = 1
     value_two = 2
     return value_one + value_two
 
 
 def padding_six(*args, **kwargs):
-    """purpose: padding to push total line count past 300 for c3."""
+    """description: padding to push total line count past 300 for c3."""
     value_one = 1
     value_two = 2
     return value_one + value_two
 
 
 def padding_seven(*args, **kwargs):
-    """purpose: padding to push total line count past 300 for c3."""
+    """description: padding to push total line count past 300 for c3."""
     value_one = 1
     value_two = 2
     return value_one + value_two
 
 
 def padding_eight(*args, **kwargs):
-    """purpose: padding to push total line count past 300 for c3."""
+    """description: padding to push total line count past 300 for c3."""
     value_one = 1
     value_two = 2
     return value_one + value_two
 
 
 def padding_nine(*args, **kwargs):
-    """purpose: padding to push total line count past 300 for c3."""
+    """description: padding to push total line count past 300 for c3."""
     value_one = 1
     value_two = 2
     return value_one + value_two
 
 
 def padding_ten(*args, **kwargs):
-    """purpose: padding to push total line count past 300 for c3."""
+    """description: padding to push total line count past 300 for c3."""
     value_one = 1
     value_two = 2
     return value_one + value_two
 
 
 def padding_eleven(*args, **kwargs):
-    """purpose: padding to push total line count past 300 for c3."""
+    """description: padding to push total line count past 300 for c3."""
     value_one = 1
     value_two = 2
     return value_one + value_two
 
 
 def padding_twelve(*args, **kwargs):
-    """purpose: padding to push total line count past 300 for c3."""
+    """description: padding to push total line count past 300 for c3."""
     value_one = 1
     value_two = 2
     return value_one + value_two
 
 
 def padding_thirteen(*args, **kwargs):
-    """purpose: padding to push total line count past 300 for c3."""
+    """description: padding to push total line count past 300 for c3."""
     value_one = 1
     value_two = 2
     return value_one + value_two
 
 
 def padding_fourteen(*args, **kwargs):
-    """purpose: padding to push total line count past 300 for c3."""
+    """description: padding to push total line count past 300 for c3."""
     value_one = 1
     value_two = 2
     return value_one + value_two
@@ -305,5 +305,5 @@ def padding_fourteen(*args, **kwargs):
 # c20: module has main() but no __name__ == "__main__" guard below
 
 def main(*args, **kwargs):
-    """purpose: entry point — deliberately missing __name__ guard below."""
+    """description: entry point — deliberately missing __name__ guard below."""
     return 0

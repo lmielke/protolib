@@ -85,7 +85,7 @@ class TestDocstring(unittest.TestCase):
         self.assertEqual(d.body, '')
 
     def test_block_scalar_internal_blank_retained_in_meta(self):
-        """purpose: 'Block scalar with internal blank line: description fully parsed into meta.'"""
+        """description: 'Block scalar with internal blank line: description fully parsed into meta.'"""
         d = Docstring(BLOCK_SCALAR)
         self.assertIsNotNone(d.meta)
         desc = d.meta.get('description', '')
@@ -93,12 +93,12 @@ class TestDocstring(unittest.TestCase):
         self.assertIn('Second paragraph', desc)
 
     def test_block_scalar_body_not_absorbed(self):
-        """purpose: 'Body text after a block-scalar head must appear in body, not meta.'"""
+        """description: 'Body text after a block-scalar head must appear in body, not meta.'"""
         d = Docstring(BLOCK_SCALAR)
         self.assertIn('Body text', d.body)
 
     def test_prose_body_not_absorbed_as_meta(self):
-        """purpose: 'key: value prose lines in the body must not be parsed as meta fields.'"""
+        """description: 'key: value prose lines in the body must not be parsed as meta fields.'"""
         d = Docstring(PROSE_BODY)
         self.assertIsNotNone(d.meta)
         self.assertNotIn('key', d.meta)

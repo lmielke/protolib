@@ -18,7 +18,6 @@ from colorama import Fore, Style
 
 class Contracts:
     """
-    purpose: "Pre-dispatch kwarg validator and enricher for protolib APIs."
     description: >-
       Owns the required-argument registry and the full validation pipeline.
       Cleans kwarg strings, enforces per-API required fields, injects package

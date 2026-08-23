@@ -19,7 +19,6 @@ from protolib.app.contracts import Contracts as _Contracts
 
 class DefaultClass:
     """
-    purpose: Application object — thin orchestrator.
     "description": >-
       Contains only instantiations and calls.
           Override run() in clones to customise the execution sequence.

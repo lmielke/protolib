@@ -64,7 +64,7 @@ Cannot be suppressed. Fix at write-time.
 | `c15`       | def      | Indent ≤ 16 spaces (no deep nesting)                      |
 | `c18`       | module   | Every `<module>.py` paired with `test_<module>.py`        |
 | `c_dfmt`    | docstring| Front-matter present and well-formed                     |
-| `c_dscope`  | docstring| `script_path:` + `purpose:` on module/class/def           |
+| `c_dscope`  | docstring| `script_path:` + `description:` on module/class/def      |
 | `c_dorph`   | docstring| No orphan front-matter blocks                             |
 
 Planned test-related checks (named, **not yet wired into the scanner** —

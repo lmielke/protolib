@@ -16,7 +16,6 @@ import ast, yaml
 
 class Docstring:
     """
-    purpose: "Wrap a raw docstring; expose YAML front-matter meta and body."
     description: "Empty or malformed YAML yields meta=None, body=''."
     """
 
@@ -61,7 +60,6 @@ class Docstring:
 
 class Docstrings:
     """
-    purpose: "Factories for Docstring objects from AST nodes or classes."
     description: "from_node → single Docstring. from_class → dict keyed by method."
     """
 

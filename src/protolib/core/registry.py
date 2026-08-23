@@ -31,7 +31,6 @@ PY2JSON = {str: "string", int: "integer", float: "number",
 
 class RegistryClient:
     """
-    purpose: Outbound registry client.
     description: Sends registration + heartbeat to a registry host.
     """
 
@@ -104,7 +103,6 @@ class RegistryClient:
 
 class RegistryHost:
     """
-    purpose: Passive registry host.
     description: Stores service state, responds with full registry.
     """
 

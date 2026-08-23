@@ -40,7 +40,6 @@ class Synchronizer:
 
     def sync(self, *args, **kwargs) -> dict:
         """
-        purpose: Walk SYNC_SCOPE in source and copy each file to target.
         description: 'Returns {''copied'': [...]}.'
         """
         copied = self._apply(*args, **kwargs)

@@ -19,7 +19,6 @@ color.init()
 
 class Archiver:
     """
-    purpose: "Archives a set of (source, target) path pairs to timestamped directories."
     description: |-
       Holds per-run state (errors, copy count, rendered table rows) and drives the
       archive loop. Pure copy helpers remain module-level functions. Call run() to

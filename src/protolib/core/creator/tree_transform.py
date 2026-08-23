@@ -41,7 +41,6 @@ class TreeTransformer:
 
     def rewrite(self, text_repls: dict, *args, **kwargs) -> None:
         """
-        purpose: 'Walk tree top-down: replace text in each file.'
         description: |-
           Marker stripping is disabled
                   under the self-similar template policy; remove_marked_lines remains callable.

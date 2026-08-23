@@ -39,7 +39,6 @@ _HINT_MSG = (
 
 class InfoCollector:
     """
-    purpose: Collects and renders package information in a single pass.
     description: Owns the accumulator list so info gathering is free of module-level
       mutable state. All section methods append to self._info_list; main() renders it.
     """
@@ -185,7 +184,6 @@ def main(*args, clip: bool = None, **kwargs) -> str:
 
 def venv_is_active(exec_path, *args, **kwargs) -> bool:
     """
-    purpose: Check if the uv venv is active.
     description: uv places the venv at <project_dir>/.venv, so we check for '.venv' in
       the path.
     """

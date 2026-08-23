@@ -26,7 +26,6 @@ DEFAULT_PORT = 9001
 
 class CloneParams:
     """
-    purpose: Old/new identity mapping for the clone.
     description: Builds text-replacement and rename rules.
     """
 

@@ -22,7 +22,6 @@ import protolib.app.settings as sts
 
 def _resolve_dots(wp:str, *args, **kwargs):
     """
-    purpose: Resolve leading .
     description: or .. relative to cwd.
     """
     if wp.startswith(".."):
@@ -33,7 +32,6 @@ def _resolve_dots(wp:str, *args, **kwargs):
 
 def unalias_path(wp:str, *args, **kwargs):
     """
-    purpose: Replace path aliases (.
     description: ~ %USERPROFILE%) with absolute paths.
     """
     if not any(c in wp for c in ".~%"):

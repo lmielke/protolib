@@ -298,7 +298,6 @@ def play_sound(status: str, *args, **kwargs):
 
 def logprint(msg: str, *args, level: str = None, **kwargs) -> str:
     """
-    purpose: Only WARNING and ERROR are logged.
     description: INFO/DEBUG remain console-only.
     """
     assert getattr(sts, "error_path", None), "sts.error_path not set"

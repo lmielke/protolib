@@ -19,7 +19,6 @@ _SUBCOMMANDS = ("clone", "sync")
 
 def mk_args(*args, **kwargs):
     """
-    purpose: Parse admin CLI arguments.
     description: Returns argparse.Namespace.
     """
     parser = argparse.ArgumentParser(prog="proto-admin",

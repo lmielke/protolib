@@ -32,7 +32,6 @@ def _get_state(*args, **kwargs) -> dict:
 
 def main(*args, **kwargs) -> str:
     """
-    purpose: Announce API — registry host endpoint.
     description: Dormant unless registry_host_enabled is True.
     """
     if not getattr(sts, 'registry_host_enabled', False):
