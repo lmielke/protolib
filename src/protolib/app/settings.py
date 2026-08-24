@@ -10,7 +10,6 @@ tags:
 - parsing
 - settings
 governance_exceptions:
-- c8: no class definition — verify OOP intent
 - c41: duplicate basename at app/settings.py, core/settings.py
 """
 import os, re, yaml

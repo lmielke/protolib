@@ -9,8 +9,6 @@ tags:
 - cli
 - parsing
 - settings
-governance_exceptions:
-- c8: no class definition — verify OOP intent
 """
 import argparse, sys
 

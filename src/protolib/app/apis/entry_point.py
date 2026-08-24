@@ -1,29 +1,42 @@
 """
 script_path: src/protolib/app/apis/entry_point.py
 description: >-
-  Serves as a template for wiring new APIs into the protolib dispatch system. Instantiates
-  DefaultClass and forwards all arguments transparently. Injects the package name from settings
-  before returning the instance. Developers clone this file to create new application entry
-  points.
+  Template entry point for protolib and cloned packages. EntryPoint wraps DefaultClass,
+  injecting the package name from settings. Clone this file and override EntryPoint.run()
+  to customise the execution sequence for a new package.
 tags:
 - blueprint
 - cli
 - settings
-governance_exceptions:
-- c8: no class definition — verify OOP intent
 """
 
 import protolib.app.settings as sts
 from protolib.app.protopy import DefaultClass
 
-def entry_point_function(*args, **kwargs):
-    inst = DefaultClass(*args, **kwargs)
-    return inst
+
+class EntryPoint:
+    """description: 'Thin CLI adapter — owns DefaultClass creation with package name injected.'"""
+
+    def __init__(self, *args, **kwargs):
+        """description: 'Instantiate DefaultClass, forwarding all arguments.'"""
+        self.instance = DefaultClass(*args, **kwargs)
+
+    def run(self, *args, **kwargs):
+        """description: 'Return the wrapped DefaultClass instance.'"""
+        return self.instance
+
+    def __repr__(self) -> str:
+        """description: 'Machine-readable representation showing wrapped instance.'"""
+        return f"EntryPoint(instance={self.instance!r})"
+
+    def __str__(self) -> str:
+        """description: 'Human-readable summary of the wrapped instance.'"""
+        return f"EntryPoint({self.instance})"
 
 def main(*args, **kwargs):
-    """
-    description: All entry points must contain a main function like main(*args, **kwargs)
-    """
-    return entry_point_function(*args, pg_name=sts.package_name, **kwargs)
+    """description: 'All entry points must contain a main(*args, **kwargs) function.'"""
+    return EntryPoint(*args, pg_name=sts.package_name, **kwargs).run()
+
+
 if __name__ == '__main__':
     main()
