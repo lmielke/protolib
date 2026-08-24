@@ -20,11 +20,13 @@ _NO_SVC_ID = {"ok": False, "service_id": None, "url": None,
               "service": None, "message": "service_id is required"}
 
 def _json_print(*args, data: dict, **kwargs) -> str:
+    """description: 'Serialize data to indented JSON, print it, and return the string.'"""
     output = json.dumps(data, indent=2)
     print(output)
     return output
 
 def _discover_service(*args, service_id: str = None, **kwargs) -> dict:
+    """description: 'Query registry for service_id; return envelope with ok, url, service, message.'"""
     if not service_id: return _NO_SVC_ID
     client = RegistryClient(*args, **kwargs)
     svc = client.discover(service_id, *args, fresh=True, **kwargs)
@@ -34,6 +36,7 @@ def _discover_service(*args, service_id: str = None, **kwargs) -> dict:
             "url": url, "service": svc, "message": msg}
 
 def main(*args, **kwargs) -> str:
+    """description: 'CLI entry point — discover service and print JSON result.'"""
     return _json_print(*args, data=_discover_service(*args, **kwargs), **kwargs)
 
 if __name__ == '__main__':

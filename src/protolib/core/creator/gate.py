@@ -45,6 +45,14 @@ class Gate:
         if not results.exists(): return 1
         return json.loads(results.read_text()).get("failed", 1)
 
+    def __repr__(self, *args, **kwargs) -> str:
+        """description: 'Calling signature.'"""
+        return f"Gate(project_dir={str(self.project_dir)!r})"
+
+    def __str__(self, *args, **kwargs) -> str:
+        """description: 'Short text showing bound package and project path.'"""
+        return f"Gate(pkg={self.pkg}, dir={self.project_dir})"
+
 def run_gate(project_dir, *args, **kwargs) -> None:
     """description: Module-level entry point for clone.py and sync.py."""
     Gate(project_dir=project_dir).run()

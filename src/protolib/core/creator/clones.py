@@ -48,6 +48,14 @@ class Clones:
             return []
         return (yaml.safe_load(self.path.read_text()) or {}).get("clones", [])
 
+    def __repr__(self, *args, **kwargs) -> str:
+        """description: 'Calling signature.'"""
+        return f"Clones(path={self.path!r})"
+
+    def __str__(self, *args, **kwargs) -> str:
+        """description: 'Short text showing registry file path.'"""
+        return f"Clones({self.path})"
+
 def _pkg_name(project_path: Path, *args, **kwargs) -> str:
     """description: Read package name from project_path/pyproject.toml."""
     data = tomllib.loads((project_path / "pyproject.toml").read_text())

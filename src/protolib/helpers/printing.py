@@ -41,6 +41,7 @@ if not event_logger.handlers:
 
 # ── Color enum & level mappings ──────────────────────────────
 class Color(Enum):
+    """description: 'ANSI foreground color tokens used by level and module color maps.'"""
     RED = Fore.RED
     YELLOW = Fore.YELLOW
     GREEN = Fore.GREEN
@@ -48,6 +49,14 @@ class Color(Enum):
     MAGENTA = Fore.MAGENTA
     CYAN = Fore.CYAN
     RESET = Fore.RESET
+
+    def __repr__(self, *args, **kwargs) -> str:
+        """description: 'Calling signature.'"""
+        return "Color(*args, **kwargs)"
+
+    def __str__(self, *args, **kwargs) -> str:
+        """description: 'Color name and ANSI value.'"""
+        return f"Color({self.name}={self.value!r})"
 
 
 LEVEL_COLORS = dict(
@@ -103,11 +112,13 @@ _SOUND_MAP = {
 # ── internal helpers ─────────────────────────────────────────
 
 def _colorize_tags(text: str, *args, **kwargs) -> str:
+    """description: 'Apply background color to recognized XML-style tag names in text.'"""
     for name, color in _TAG_COLORS.items():
         text = text.replace(f'{name}>', f"{color}{name}{Style.RESET_ALL}>")
     return text
 
 def _colorize_keywords(text: str, *args, **kwargs) -> str:
+    """description: 'Dim and whiten sample/response keywords; highlight Strategy Prompt.'"""
     for kw in _DIM_KEYWORDS:
         styled = f"__{Style.DIM}{Fore.WHITE}{kw[2:]}{Style.RESET_ALL}{Style.RESET_ALL}"
         text = text.replace(kw, styled)
@@ -116,11 +127,13 @@ def _colorize_keywords(text: str, *args, **kwargs) -> str:
     return text
 
 def _colorize_markdown(text: str, *args, **kwargs) -> str:
+    """description: 'Apply ANSI color to markdown headings, code fences, and URLs.'"""
     for pattern, replacement, flags in _MD_PATTERNS:
         text = re.sub(pattern, replacement, text, flags=flags)
     return text
 
 def _format_value(value, *args, **kwargs) -> str:
+    """description: 'Wrap str/dict/list values for display; convert others via str().'"""
     if isinstance(value, str): return wrap_text(value, *args, **kwargs)
     if isinstance(value, dict):
         joined = '\n'.join(f"{Fore.CYAN}{k}{Fore.RESET}: {str(v)}" for k, v in value.items())
@@ -129,6 +142,7 @@ def _format_value(value, *args, **kwargs) -> str:
     return str(value)
 
 def _print_unrolled_prompts(k, vs, *args, **kwargs):
+    """description: 'Print prompt list key with count then each truncated prompt.'"""
     print(f"\t{k = }: {len(vs)}")
     for i, prompt in enumerate(vs):
         start = '\n' if i != 0 else ''
@@ -136,6 +150,7 @@ def _print_unrolled_prompts(k, vs, *args, **kwargs):
         print(f"{start}\t\t{Fore.MAGENTA}{i}{Fore.RESET}: {prompt[:150]}")
 
 def _print_df_line(line, *args, i: int, total: int, color=Fore.MAGENTA, sum_color=None, **kwargs):
+    """description: 'Print one dataframe row; colorize header and optional summary row.'"""
     if i <= 1:
         print(f"{color}{line}{Fore.RESET}")
     elif sum_color and i == total - 1:
@@ -145,6 +160,7 @@ def _print_df_line(line, *args, i: int, total: int, color=Fore.MAGENTA, sum_colo
         print(line)
 
 def _caller_info(*args, **kwargs) -> tuple[str, str, str]:
+    """description: 'Return (module, class, function) names two frames up the call stack.'"""
     f = inspect.currentframe().f_back.f_back
     cls = f.f_locals.get("self")
     mod = f.f_globals.get("__name__", "")
@@ -162,12 +178,14 @@ def _ready_logger(*args, p: str | None, **kwargs) -> None:
     event_logger.addHandler(h)
 
 def _log_style(level: str, *args, mod: str = "", **kwargs):
+    """description: 'Resolve ANSI style and Color for a log level or module name.'"""
     style = (Style.BRIGHT if level in ("debug", "dev")
              else Style.NORMAL if level else Style.DIM)
     color = LEVEL_COLORS.get(level, MODULE_COLORS.get(mod, LEVEL_COLORS["info"]))
     return style, color
 
 def _log_emit(msg, *args, level: str, origin: str, console_log: bool = True, **kwargs):
+    """description: 'Route warning/error to file logger and print to console if enabled.'"""
     style, color = _log_style(level, *args, **kwargs)
     if level in ("warning", "error"):
         log_fn = getattr(event_logger, level, event_logger.warning)
@@ -189,6 +207,7 @@ def normalize_max_chars(max_chars: int, text, *args, **kwargs):
     return int(max_chars * 2)
 
 def wrap_text(text: str, *args, max_chars: int = sts.table_max_chars, **kwargs):
+    """description: 'Wrap text to max_chars width, normalizing threshold first.'"""
     max_chars = normalize_max_chars(max_chars, text, *args, **kwargs)
     if not isinstance(text, str) or len(text) <= max_chars: return text
     wrapped = ['\n'.join(tw(l, max_chars)) if len(l) > max_chars else l
@@ -196,11 +215,13 @@ def wrap_text(text: str, *args, max_chars: int = sts.table_max_chars, **kwargs):
     return '\n'.join(wrapped).strip()
 
 def wrap_table(d: dict, *args, **kwargs):
+    """description: 'Return copy of dict with all values wrapped to display width.'"""
     tbl_dict = dict(**d)
     for kk, vs in d.items(): tbl_dict[kk] = _wrap_value(vs, *args, **kwargs)
     return tbl_dict
 
 def _wrap_value(vs, *args, **kwargs):
+    """description: 'Wrap a single str/dict/list value; pass non-text types through.'"""
     if isinstance(vs, str): return wrap_text(vs, *args, **kwargs)
     if isinstance(vs, dict):
         joined = '\n'.join(f"{Fore.CYAN}{k}{Fore.RESET}: {str(v)}" for k, v in vs.items())
@@ -228,6 +249,7 @@ def clean_pipe_text(text: str, *args, **kwargs) -> str:
     return t
 
 def pretty_prompt(prompt: str, *args, verbose: int = 0, **kwargs) -> str:
+    """description: 'Strip ANSI/pipe artifacts then apply tag, keyword, and markdown colors.'"""
     prompt = re.sub(r'<user_comment>\s*</user_comment>', '', prompt, flags=re.MULTILINE)
     p = clean_pipe_text(strip_ansi_codes(prompt, *args, **kwargs), *args, **kwargs)
     p = _colorize_markdown(
@@ -236,23 +258,27 @@ def pretty_prompt(prompt: str, *args, verbose: int = 0, **kwargs) -> str:
     return p
 
 def pretty_dict(name: str, d: dict, *args, color=Fore.CYAN, **kwargs):
+    """description: 'Print dict key-value pairs with colored header and key names.'"""
     print(f"\n{color}{name} {Fore.RESET}\n{'*' * len(name)}")
     for k, v in d.items():
         print(f"{color}{k}: {Fore.RESET}{v}")
 
 def dict_to_table(name: str, d: dict, *args, **kwargs):
+    """description: 'Render dict as a two-column tabulate table with colored underline.'"""
     tbl_dict = wrap_table(d, *args, **kwargs)
     colored_table_underline(
         tb(tbl_dict.items(), headers=[f'name: {name}', 'value'], tablefmt='simple'),
         *args, **kwargs)
 
 def records_to_table(records: list, *args, **kwargs):
+    """description: 'Render list of dicts as a tabulate table with colored underline.'"""
     wrapped = [wrap_table(r, *args, **kwargs) for r in records]
     headers = records[0].keys()
     table = [r.values() for r in wrapped]
     colored_table_underline(tb(table, headers=headers), *args, **kwargs)
 
 def colored_table_underline(tbl, *args, up_to: int = 0, color=Fore.CYAN, **kwargs):
+    """description: 'Print table with header rows colored up to up_to index.'"""
     print('\n')
     for i, line in enumerate(tbl.split('\n')):
         if i <= up_to:
@@ -269,6 +295,7 @@ def dict_to_table_v(d: dict, *args, **kwargs):
         tb([row], headers=list(d.keys()), tablefmt='simple'), *args, **kwargs)
 
 def unroll_print_dict(d: dict, unroll_key: str = 'prompts', *args, **kwargs):
+    """description: 'Print dict entries; expand unroll_key as indexed prompt list.'"""
     for k, vs in d.items():
         if k == 'service_endpoint':
             print(f"\t{k = }: {Fore.MAGENTA}{vs}{Fore.RESET}")

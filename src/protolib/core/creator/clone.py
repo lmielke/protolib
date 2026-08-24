@@ -32,11 +32,13 @@ class CloneParams:
     KEYS = ("pr_name", "pg_name", "alias", "port")
 
     def __init__(self, *args, old: dict, new: dict, **kwargs):
+        """description: 'Normalise old and new identity mappings on construction.'"""
         self.old = self._norm(*args, mapping=old, **kwargs)
         self.new = self._norm(*args, mapping=new, **kwargs)
 
     @staticmethod
     def _norm(*args, mapping: dict, **kwargs) -> dict:
+        """description: 'Copy mapping and stringify port if present.'"""
         out = dict(mapping)
         if out.get("port") is not None: out["port"] = str(out["port"])
         return out
@@ -68,6 +70,7 @@ class CloneParams:
 
     @staticmethod
     def _add_case_variants(*args, repls: dict, old: str, new: str, **kwargs) -> None:
+        """description: 'Add lower, capitalised, and upper variant pairs to repls dict.'"""
         repls[old] = new
         if old.islower() and old.isalpha():
             repls[old.capitalize()] = new.capitalize()
@@ -83,6 +86,14 @@ class CloneParams:
         return {self.old[k]: self.new[k] for k in keys
                 if self.old.get(k) and self.new.get(k)}
 
+    def __repr__(self, *args, **kwargs) -> str:
+        """description: 'Calling signature.'"""
+        return f"CloneParams(old={self.old!r}, new={self.new!r})"
+
+    def __str__(self, *args, **kwargs) -> str:
+        """description: 'Short text showing old and new package names.'"""
+        return f"CloneParams({self.old.get('pg_name')} -> {self.new.get('pg_name')})"
+
 
 class Validator:
     """
@@ -90,15 +101,18 @@ class Validator:
     """
 
     def __init__(self, *args, py_versions: PythonVersions = None, **kwargs):
+        """description: 'Accept optional pre-built PythonVersions; create one if absent.'"""
         self.pv = py_versions or PythonVersions(*args, **kwargs)
 
     def check(self, *args, **kwargs):
+        """description: 'Run all validation checks; exit red on first failure.'"""
         self._check_port(*args, **kwargs)
         self._check_py(*args, **kwargs)
         self._check_alias(*args, **kwargs)
 
     @staticmethod
     def _check_port(*args, port=None, **kwargs) -> None:
+        """description: 'Exit if port is None or outside 1..65535.'"""
         if port is None: _exit_red("Error: --port is required (e.g., --port 9006).", *args, **kwargs)
         try:
             if not (1 <= int(port) <= 65535): raise ValueError
@@ -106,13 +120,16 @@ class Validator:
 
     @staticmethod
     def _check_alias(*args, new_alias=None, **kwargs) -> None:
+        """description: 'Exit if alias is provided but shorter than 3 characters.'"""
         if new_alias and len(new_alias) < 3:
             _exit_red(f"Error: --new_alias '{new_alias}' too short (need \u22653 chars).", *args, **kwargs)
 
     def _check_py(self, *args, **kwargs):
+        """description: 'Delegate python version validation to _check_py_format.'"""
         self._check_py_format(*args, **kwargs)
 
     def _check_py_format(self, *args, py_version=None, install=False, **kwargs) -> None:
+        """description: 'Validate py_version format and availability; exit on mismatch.'"""
         if install and py_version is None:
             _exit_red("Error: Python version (-p) required with --install.", *args, **kwargs)
         if py_version is None: return
@@ -123,6 +140,14 @@ class Validator:
         if py_version not in avail and mm not in avail:
             _exit_red(f"Error: Python '{py_version}' not found.", *args, **kwargs)
 
+    def __repr__(self, *args, **kwargs) -> str:
+        """description: 'Calling signature.'"""
+        return "Validator(*args, **kwargs)"
+
+    def __str__(self, *args, **kwargs) -> str:
+        """description: 'Short text showing bound PythonVersions instance.'"""
+        return f"Validator(pv={self.pv})"
+
 
 class CloneUI:
     """
@@ -130,6 +155,7 @@ class CloneUI:
     """
 
     def collect(self, *args, new_alias=None, yes=False, **kwargs):
+        """description: 'Gather all clone inputs interactively; return (tgt_dir, pr, pg, alias).'"""
         td, pg = self._collect_inputs(*args, **kwargs)
         kwargs.update({'new_pg_name': pg, 'new_alias': new_alias, 'yes': yes})
         pr = self._resolve_pr_name(*args, **kwargs)
@@ -139,14 +165,17 @@ class CloneUI:
         return os.path.abspath(td), pr, pg, new_alias
 
     def _resolve_pr_name(self, *args, **kwargs):
+        """description: 'Prompt user for project dir name and return the resolved value.'"""
         return self._prompt_pr_name(*args, **kwargs)
 
     @staticmethod
     def _ask(question, *args, **kwargs) -> str:
+        """description: 'Print a yellow prompt and return stripped user input.'"""
         return input(f"{Fore.YELLOW}{question}: {Fore.RESET}").strip()
 
     @staticmethod
     def _collect_inputs(*args, tgt_dir=None, new_pg_name=None, **kwargs):
+        """description: 'Prompt for missing tgt_dir and new_pg_name; return both.'"""
         if tgt_dir is None:
             tgt_dir = CloneUI._ask("Enter target dir (e.g., /path/to/parent_dir)")
         tgt_dir = os.path.expanduser(tgt_dir)
@@ -156,6 +185,7 @@ class CloneUI:
 
     @staticmethod
     def _prompt_pr_name(*args, new_pr_name=None, new_pg_name=None, yes=False, **kwargs):
+        """description: 'Ask user to rename project dir when it matches package name.'"""
         if (new_pr_name is None or new_pr_name == new_pg_name) and not yes:
             prompt = (f"\n{Fore.YELLOW}READ THIS:{Fore.RESET}\nPackage: '{new_pg_name}', "
                       f"Project dir: '{new_pr_name}'."
@@ -166,18 +196,21 @@ class CloneUI:
 
     @staticmethod
     def _confirm_or_exit(*args, path, new_pg_name, new_alias=None, **kwargs):
+        """description: 'Show clone summary and exit if user answers n.'"""
         msg = (f"\n{Fore.CYAN}Create project:{Fore.RESET}\n  Dir: {path}\n"
                f"  Pkg: {new_pg_name}\n  Alias: {new_alias or 'N/A'}\nContinue? [Y/n]: ")
         if input(msg).strip().lower() == "n": _exit_red("Canceled.", *args, **kwargs)
 
     @staticmethod
     def _safety_check(*args, path: str, **kwargs) -> None:
+        """description: 'Abort if target path contains protolib outside the source root.'"""
         if 'protolib' in path and 'protolib' not in os.path.abspath(sts.project_dir):
             _exit_red(f"Safety check: Target appears related to 'protolib'. Target: {path}", *args, **kwargs)
 
     @staticmethod
     def print_params(*args, new_pr_name=None, new_pg_name=None, new_alias=None,
                      tgt_dir=None, port=None, **kwargs) -> None:
+        """description: 'Print the resolved clone parameters before execution starts.'"""
         Y, R = Fore.YELLOW, Fore.RESET
         print(f"\n{Fore.CYAN}Starting clone with parameters:{R}")
         items = [("Project", new_pr_name), ("Package", new_pg_name),
@@ -186,9 +219,18 @@ class CloneUI:
 
     @staticmethod
     def print_done(*args, path: str, **kwargs) -> None:
+        """description: 'Print success message and Readme.md pointer after clone completes.'"""
         print(f"\n{Fore.GREEN}Cloning completed!{Fore.RESET}")
         print(f"\n{Fore.YELLOW}Now read {Fore.CYAN}{path}/Readme.md"
               f"{Fore.RESET}{Fore.YELLOW} and follow the instructions.{Fore.RESET}")
+
+    def __repr__(self, *args, **kwargs) -> str:
+        """description: 'Calling signature.'"""
+        return "CloneUI(*args, **kwargs)"
+
+    def __str__(self, *args, **kwargs) -> str:
+        """description: 'Short text identifying this UI helper.'"""
+        return "CloneUI"
 
 
 class Cloner:
@@ -197,6 +239,7 @@ class Cloner:
     """
 
     def __init__(self, src_dir: str, *args, verbose: int = 0, source_settings=None, **kwargs):
+        """description: 'Bind source dir and verbosity; load source settings if not supplied.'"""
         self.src_dir = src_dir
         self.verbose = verbose
         self.source_settings = source_settings or self._load_source_settings(*args, **kwargs)
@@ -226,12 +269,14 @@ class Cloner:
         return {n for n in args[1] if n in sts.ignore_dirs}
 
     def transform(self, project_path, params, *args, py_version=None, **kwargs):
+        """description: 'Restructure, rewrite, and pin python version in the copied project.'"""
         tx = TreeTransformer(project_path, *args, ignore_dirs=sts.ignore_dirs, verbose=self.verbose, **kwargs)
         tx.restructure(params.file_rules())
         tx.rewrite(params.text_repls())
         tx.set_pyproject_version(os.path.join(project_path, 'pyproject.toml'), py_version)
 
     def setup(self, project_path, *args, install=False, **kwargs):
+        """description: 'Run uv sync in project_path if install=True, else print skip note.'"""
         if not install:
             self._skip_install(project_path, *args, **kwargs)
             return
@@ -240,17 +285,20 @@ class Cloner:
         self._run_uv_sync(project_path, *args, **kwargs)
 
     def _skip_install(self, project_path, *args, **kwargs):
+        """description: 'Print a skip-install hint when verbosity permits.'"""
         if self.verbose < 1: return
         note = f"Skipping install. Run 'uv sync' in '{project_path}'."
         print(f"{Fore.GREEN}\n{note}{Fore.RESET}")
 
     def _run_uv_sync(self, project_path, *args, **kwargs) -> None:
+        """description: 'Build the uv command, log it, and delegate to _exec_uv.'"""
         cmd = self._uv_cmd(*args, **kwargs)
         if self.verbose >= 1:
             print(f"{Fore.YELLOW}Now running:{Fore.RESET} {' '.join(cmd)} in {project_path}")
         self._exec_uv(cmd, project_path, *args, **kwargs)
 
     def _exec_uv(self, cmd, project_path, *args, **kwargs):
+        """description: 'Execute uv command in project_path; print error on failure.'"""
         try: subprocess.check_call(cmd, cwd=project_path)
         except subprocess.CalledProcessError as e:
             print(f"{Fore.RED}uv sync failed: {e}{Fore.RESET}")
@@ -259,6 +307,7 @@ class Cloner:
 
     @staticmethod
     def _uv_cmd(*args, py_version: str = None, **kwargs) -> list:
+        """description: 'Build uv sync command list, appending --python if version supplied.'"""
         uv_bin = os.path.join(os.path.expanduser("~"), ".local", "bin", "uv")
         cmd = [uv_bin if os.path.exists(uv_bin) else "uv", "sync"]
         if py_version: cmd += ["--python", py_version]
@@ -280,7 +329,16 @@ class Cloner:
         self._post_gate(project_path, *args, **kwargs)
         return project_path
 
+    def __repr__(self, *args, **kwargs) -> str:
+        """description: 'Calling signature.'"""
+        return f"Cloner({self.src_dir!r})"
+
+    def __str__(self, *args, **kwargs) -> str:
+        """description: 'Short text showing source directory.'"""
+        return f"Cloner({self.src_dir})"
+
 def _exit_red(msg: str, *args, **kwargs) -> None:
+    """description: 'Print msg in red and exit the process.'"""
     print(f"{Fore.RED}{msg}{Fore.RESET}")
     sys.exit()
 

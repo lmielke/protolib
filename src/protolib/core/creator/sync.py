@@ -34,6 +34,7 @@ class Synchronizer:
     SYNC_SCOPE = ("core", "helpers", "test/core")
 
     def __init__(self, *args, source_dir, target_dir=None, verbose=0, **kwargs):
+        """description: 'Bind source and target dirs; default target is current package dir.'"""
         self.source_dir = os.path.abspath(source_dir)
         self.target_dir = os.path.abspath(target_dir or sts.package_dir)
         self.verbose = verbose
@@ -46,12 +47,14 @@ class Synchronizer:
         return {"copied": copied}
 
     def _apply(self, *args, **kwargs) -> list:
+        """description: 'Iterate all SYNC_SCOPE dirs and collect copied rel-paths.'"""
         copied = []
         for scope in self.SYNC_SCOPE:
             copied.extend(self._sync_scope(*args, scope=scope, **kwargs))
         return copied
 
     def _sync_scope(self, *args, scope: str, **kwargs) -> list:
+        """description: 'Copy all files under one scope dir; return list of copied rel-paths.'"""
         scope_dir = os.path.join(self.source_dir, scope)
         if not os.path.isdir(scope_dir):
             return []
@@ -59,6 +62,7 @@ class Synchronizer:
         return [r for r in rels if self._copy(*args, rel=r, **kwargs)]
 
     def _iter_rels(self, scope_dir: str, *args, **kwargs):
+        """description: 'Yield source-relative paths for every file under scope_dir.'"""
         for root, dirs, files in os.walk(scope_dir):
             dirs[:] = [d for d in dirs if d not in sts.ignore_dirs]
             for fname in files:
@@ -66,12 +70,21 @@ class Synchronizer:
                 yield rel.replace(os.sep, "/")
 
     def _copy(self, *args, rel: str, **kwargs) -> bool:
+        """description: 'Copy one file from source to target preserving relative path.'"""
         src, dst = os.path.join(self.source_dir, rel), os.path.join(self.target_dir, rel)
         if not os.path.exists(src): return False
         os.makedirs(os.path.dirname(dst), exist_ok=True)
         shutil.copy2(src, dst)
         if self.verbose >= 2: print(f"  synced: {rel}")
         return True
+
+    def __repr__(self, *args, **kwargs) -> str:
+        """description: 'Calling signature.'"""
+        return f"Synchronizer(source_dir={self.source_dir!r}, target_dir={self.target_dir!r})"
+
+    def __str__(self, *args, **kwargs) -> str:
+        """description: 'Short text showing source and target directories.'"""
+        return f"Synchronizer({self.source_dir} -> {self.target_dir})"
 
 def _sync_to_clone(*args, entry: dict, verbose: int = 0, **kwargs) -> dict:
     """description: Sync sts.package_dir to a single registered clone."""

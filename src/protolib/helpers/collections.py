@@ -104,6 +104,7 @@ def _is_ignored_dir(name, *args, **kwargs):
     return any(name == i or name.endswith(i.strip('*')) for i in sts.ignore_dirs)
 
 def _walk_for_file(file_name, pr_dir, max_depth, *args, **kwargs):
+    """description: 'Walk pr_dir up to max_depth; return first path where file_name is found.'"""
     root_depth = pr_dir.count(os.sep)
     for root, dirs, files in os.walk(pr_dir, topdown=True):
         depth_exceeded = root.count(os.sep) - root_depth >= max_depth
@@ -114,6 +115,7 @@ def _walk_for_file(file_name, pr_dir, max_depth, *args, **kwargs):
     return None
 
 def _should_skip_dir(*args, root, dirs, depth_exceeded, **kwargs):
+    """description: 'Return True and clear dirs if root is ignored or depth exceeded.'"""
     if _is_ignored_dir(os.path.basename(root), *args, **kwargs) or depth_exceeded:
         dirs.clear()
         return True

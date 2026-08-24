@@ -36,6 +36,7 @@ class ProtoControlHandler(http.server.SimpleHTTPRequestHandler):
     available_apis = {}
 
     def __init__(self, *args, **kwargs):
+        """description: 'Initialize handler via parent SimpleHTTPRequestHandler.'"""
         super().__init__(*args, **kwargs)
 
     @classmethod
@@ -50,6 +51,7 @@ class ProtoControlHandler(http.server.SimpleHTTPRequestHandler):
 
     @classmethod
     def _scan_dir(cls, *args, apis_dir: str, skip: str, **kwargs):
+        """description: 'Walk apis_dir and load each eligible .py file into available_apis.'"""
         if not os.path.isdir(apis_dir):
             return
         for fn in os.listdir(apis_dir):
@@ -59,6 +61,7 @@ class ProtoControlHandler(http.server.SimpleHTTPRequestHandler):
 
     @classmethod
     def _try_load_api(cls, filename: str, skip: str, *args, **kwargs):
+        """description: 'Filter filename and delegate to _import_api; return (name, mod) or None.'"""
         if not filename.endswith(".py") or filename.startswith(("_", "#")):
             return None
         name = os.path.splitext(filename)[0]
@@ -68,6 +71,7 @@ class ProtoControlHandler(http.server.SimpleHTTPRequestHandler):
 
     @classmethod
     def _import_api(cls, name: str, *args, pkg_prefix: str, **kwargs):
+        """description: 'Import module by pkg_prefix.name; return (name, mod) if main exists.'"""
         try: mod = importlib.import_module(f"{pkg_prefix}.{name}")
         except Exception as e:
             logprint(f"Failed to load API '{name}': {e}", *args, level="error", **kwargs)
@@ -89,6 +93,7 @@ class ProtoControlHandler(http.server.SimpleHTTPRequestHandler):
             self._list_apis(api_name, *args, **kwargs)
 
     def _handle_get(self, name, api_mod, parsed, *args, **kwargs):
+        """description: 'Run named API module and send response; emit 500 on exception.'"""
         try:
             resp = self.run_api_command(
                 *args, api_module=api_mod, parsed_url=parsed, **kwargs)
@@ -98,6 +103,7 @@ class ProtoControlHandler(http.server.SimpleHTTPRequestHandler):
             logprint(f"Failed API '{name}': {e}", *args, level="error", **kwargs)
 
     def _list_apis(self, api_name, *args, **kwargs):
+        """description: 'Send plain-text listing of available API names when api_name not found.'"""
         apis = list(self.available_apis.keys())
         content = (f"API '{api_name}' not found.\n"
                    f"Available APIs: {apis}\n"
@@ -116,6 +122,7 @@ class ProtoControlHandler(http.server.SimpleHTTPRequestHandler):
             self.send_error(404, f"POST not supported for '{api_name}'")
 
     def _handle_announce(self, *args, **kwargs):
+        """description: 'Wrap _dispatch_announce with a 500 error guard for POST /announce.'"""
         try:
             self._dispatch_announce(*args, **kwargs)
         except Exception as e:
@@ -123,6 +130,7 @@ class ProtoControlHandler(http.server.SimpleHTTPRequestHandler):
             logprint(f"POST /announce error: {e}", *args, level="error", **kwargs)
 
     def _dispatch_announce(self, *args, **kwargs):
+        """description: 'Read body, gate on registry_host_enabled, delegate to _handle_registration.'"""
         body = self._read_body(*args, **kwargs)
         if not getattr(sts, 'registry_host_enabled', False):
             self._send_json_response({"error": "not enabled"}, 403, *args, **kwargs)
@@ -131,6 +139,7 @@ class ProtoControlHandler(http.server.SimpleHTTPRequestHandler):
         self._send_json_response(state, 200, *args, **kwargs)
 
     def _read_body(self, *args, **kwargs) -> dict:
+        """description: 'Read and JSON-decode POST body using Content-Length header.'"""
         length = int(self.headers.get("Content-Length", 0))
         return json.loads(self.rfile.read(length)) if length > 0 else {}
 
@@ -196,6 +205,14 @@ class ProtoControlHandler(http.server.SimpleHTTPRequestHandler):
         params = _build_params(qp, *args, **kwargs)
         return self._run_api(*args, params=params, **kwargs)
 
+    def __repr__(self, *args, **kwargs) -> str:
+        """description: 'Calling signature.'"""
+        return "ProtoControlHandler(*args, **kwargs)"
+
+    def __str__(self, *args, **kwargs) -> str:
+        """description: 'Available API names loaded into this handler.'"""
+        return f"ProtoControlHandler(apis={list(self.available_apis.keys())})"
+
 def _build_params(query_params: dict, *args, **kwargs) -> dict:
     """
     description: Convert parsed query string dict to typed params for API dispatch.
@@ -225,6 +242,7 @@ def _cast_value(val: str, *args, **kwargs):
     return val
 
 def _start_heartbeat(*args, **kwargs):
+    """description: 'Start registry heartbeat loop in a daemon thread; log if unavailable.'"""
     try:
         client = RegistryClient(*args, **kwargs)
         client.start_heartbeat_loop(
@@ -234,6 +252,7 @@ def _start_heartbeat(*args, **kwargs):
         logprint("Registry heartbeat not started", *args, level="warning", **kwargs)
 
 def _start_sweep(*args, **kwargs):
+    """description: 'Start TTL sweep loop when registry_host_enabled; log if unavailable.'"""
     if not getattr(sts, 'registry_host_enabled', False):
         return
     try:
@@ -243,6 +262,7 @@ def _start_sweep(*args, **kwargs):
         logprint("Registry host sweep not started", *args, level="warning", **kwargs)
 
 def _serve(port: int, handler, *args, **kwargs):
+    """description: 'Bind TCPServer on port with handler and serve forever.'"""
     with socketserver.TCPServer(("", port), handler) as httpd:
         msg = f"{sts.package_name} server starting on port {port}"
         logprint(msg, *args, **kwargs)
@@ -260,6 +280,7 @@ def run_server(*args, port: int = None, **kwargs):
     _serve(port, ProtoControlHandler, *args, **kwargs)
 
 def main(*args, **kwargs):
+    """description: 'CLI entry point — delegate to run_server.'"""
     run_server(*args, **kwargs)
 
 

@@ -73,8 +73,11 @@ candidates`, `test file location`, `sync drift`, `test core helper
 location`, `test imports test file`. Of the test set, only `c18` (pairing,
 glob sub) is live today.
 
-`c8` (`__init__` forbidden) is waived for `unittest.TestCase` subclasses
-via a `governance_exceptions:` entry in the class docstring.
+`c8` (class presence — OOP gate) flags classless modules. Test modules
+define `TestCase` classes and never trip it — no docstring waiver needed.
+Scaffold-style modules (`settings.py`, `arguments.py`, django scaffolds)
+are exempted centrally via `name_pattern_exceptions` in
+`/etc/governance/settings.yml`, never per-file.
 
 ## Definition Patterns
 

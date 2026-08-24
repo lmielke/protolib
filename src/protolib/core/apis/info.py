@@ -44,6 +44,7 @@ class InfoCollector:
     """
 
     def __init__(self, *args, **kwargs):
+        """description: 'Initialize with an empty accumulator list.'"""
         self._info_list: list = []
 
     # ------------------------------------------------------------------ accumulator
@@ -103,6 +104,7 @@ class InfoCollector:
             self.collect(f.read(), *args, **kwargs)
 
     def _pkg_header(self, *args, **kwargs):
+        """description: 'Append package header block with project name, dirs, and venv status.'"""
         self.collect(f"\n{Fore.YELLOW}{f' PACKAGE info ':#^80}{Style.RESET_ALL}", *args, **kwargs)
         self.collect(f"\n{sts.project_name = }\n{sts.package_dir = }\n{sts.test_dir = }", *args, **kwargs)
         self.collect(f"\n\n{sts.project_dir = }", *args, **kwargs)
@@ -113,6 +115,7 @@ class InfoCollector:
             *args, **kwargs)
 
     def _pkg_tree(self, *args, verbose: int = 0, **kwargs):
+        """description: 'Append colorized directory tree; include file contents when verbose.'"""
         tree = Tree(*args, **kwargs)(
             sts.project_dir, colorized=True, ignores=sts.ignore_dirs, verbose=verbose)
         self.collect(f"{tree.get('tree')}\n", *args, **kwargs)
@@ -120,6 +123,7 @@ class InfoCollector:
             self.collect(f"{tree.get('contents')}\n", *args, **kwargs)
 
     def _pkg_imports_readme(self, *args, **kwargs):
+        """description: 'Append import graph and README contents to the accumulator.'"""
         src = import_info(*args, main_file_name='protopy.py', **kwargs)
         self.collect(f"Project import structure:\n{src}", *args, **kwargs)
         with open(os.path.join(sts.project_dir, "Readme.md"), "r") as f:
@@ -141,6 +145,14 @@ class InfoCollector:
         if clip:
             _clip_output(*args, out=out, **kwargs)
         return out
+
+    def __repr__(self, *args, **kwargs) -> str:
+        """description: 'Calling signature.'"""
+        return "InfoCollector(*args, **kwargs)"
+
+    def __str__(self, *args, **kwargs) -> str:
+        """description: 'Accumulated info line count.'"""
+        return f"InfoCollector({len(self._info_list)} lines)"
 
 
 # ------------------------------------------------------------------ module singleton + wrappers

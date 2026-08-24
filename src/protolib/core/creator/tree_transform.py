@@ -25,6 +25,7 @@ class TreeTransformer:
     REMOVE_MARKER = '# clone_remove_line'
 
     def __init__(self, project_path, *args, ignore_dirs=None, verbose=0, **kwargs):
+        """description: 'Bind to project_path root; configure dirs to skip and verbosity.'"""
         self.path = project_path
         self.ignore_dirs = ignore_dirs or set()
         self.verbose = verbose
@@ -62,6 +63,7 @@ class TreeTransformer:
             print(f"{Fore.RED}\tError updating {pyproject_path}: {e}{Fore.RESET}")
 
     def _write_pyproject(self, *args, path: str, **kwargs) -> None:
+        """description: 'Single write boundary — rewrites pyproject.toml with updated python pin.'"""
         with open(path, 'r') as f:
             new_lines, found = self._rewrite_lines(*args, lines=f.readlines(), **kwargs)
         with open(path, 'w') as f:
@@ -71,6 +73,7 @@ class TreeTransformer:
 
     @staticmethod
     def _rewrite_lines(*args, lines: list, short: str, **kwargs) -> tuple:
+        """description: 'Scan lines, replace requires-python pin; return (new_lines, found).'"""
         out, found = [], False
         for line in lines:
             if line.strip().startswith('requires-python'):
@@ -91,6 +94,7 @@ class TreeTransformer:
                 break
 
     def _rename_one_file(self, root, fn, old, new, *args, **kwargs):
+        """description: 'Rename a single file substituting old for new in its name.'"""
         old_p = os.path.join(root, fn)
         new_p = os.path.join(root, fn.replace(old, new))
         if os.path.exists(old_p) and old_p != new_p:
@@ -107,6 +111,7 @@ class TreeTransformer:
             self._try_rename_dir(*args, dn=dn, renamed=renamed, **kwargs)
 
     def _try_rename_dir(self, *args, dn, rules, renamed, **kwargs):
+        """description: 'Attempt to rename dn per rules; skip if already renamed or new is None.'"""
         for old, new in rules.items():
             if new is None or dn != old or old in renamed: continue
             if self._rename_one_dir(*args, old=old, new=new, **kwargs):
@@ -114,6 +119,7 @@ class TreeTransformer:
                 return
 
     def _rename_one_dir(self, *args, root: str, old: str, new: str, **kwargs) -> bool:
+        """description: 'Rename a single directory from old to new; return True if renamed.'"""
         old_p, new_p = os.path.join(root, old), os.path.join(root, new)
         if os.path.exists(old_p) and old_p != new_p:
             if self.verbose >= 3:
@@ -133,6 +139,7 @@ class TreeTransformer:
             if os.path.exists(fp): self._remove_one(*args, fp=fp, fn=fn, **kwargs)
 
     def _remove_one(self, *args, fp: str, fn: str, **kwargs) -> None:
+        """description: 'Delete a single file by path; log OSError without raising.'"""
         try:
             if self.verbose >= 3: print(f"{Fore.YELLOW}\tRemove file:{Fore.RESET} {fn}")
             os.remove(fp)
@@ -152,6 +159,7 @@ class TreeTransformer:
                 print(f"{Fore.RED}\tError processing file {fp}: {e}{Fore.RESET}")
 
     def _apply_repls(self, *args, fp: str, repls: dict, **kwargs) -> None:
+        """description: 'Read file, apply all replacements case-aware, write back if changed.'"""
         with open(fp, 'r', encoding='utf-8', errors='ignore') as f:
             contents = f.read()
         new = contents
@@ -162,6 +170,7 @@ class TreeTransformer:
 
     @staticmethod
     def _case_repl(*args, text: str, old: str, new: str, **kwargs) -> str:
+        """description: 'Replace old with new in text including capitalize and upper variants.'"""
         text = text.replace(old, new)
         if old.islower():
             text = text.replace(old.capitalize(), new.capitalize())
@@ -178,9 +187,18 @@ class TreeTransformer:
                 print(f"{Fore.GREEN}\tRemoved lines in:{Fore.RESET} {fn}")
 
     def _strip_marked(self, *args, fp: str, **kwargs) -> bool:
+        """description: 'Remove REMOVE_MARKER lines from fp; return True if any were removed.'"""
         with open(fp, 'r', encoding='utf-8', errors='ignore') as f:
             contents = f.read()
         if self.REMOVE_MARKER not in contents: return False
         kept = [ln for ln in contents.splitlines() if self.REMOVE_MARKER not in ln]
         with open(fp, 'w', encoding='utf-8') as f: f.write('\n'.join(kept))
         return True
+
+    def __repr__(self, *args, **kwargs) -> str:
+        """description: 'Calling signature.'"""
+        return f"TreeTransformer({self.path!r})"
+
+    def __str__(self, *args, **kwargs) -> str:
+        """description: 'Short text showing bound project path.'"""
+        return f"TreeTransformer({self.path})"

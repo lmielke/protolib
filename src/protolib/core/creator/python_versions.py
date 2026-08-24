@@ -24,6 +24,7 @@ class PythonVersions:
     _EXE_NAME = "python.exe" if _IS_WIN else "python3"
 
     def __init__(self, *args, **kwargs):
+        """description: 'Initialize with empty version cache; populated lazily on first all() call.'"""
         self._cache = None
 
     @classmethod
@@ -64,11 +65,13 @@ class PythonVersions:
 
     @classmethod
     def _path_names(cls, *args, **kwargs) -> list:
+        """description: 'Return candidate python executable names for the current platform.'"""
         if cls._IS_WIN: return [f"python{s}.exe" for s in ("", "3", "3.11", "3.12", "3.13")]
         return [f"python{s}" for s in ("3", "3.11", "3.12", "3.13", "3.14")]
 
     @classmethod
     def _dir_exes(cls, *args, directory: str, **kwargs) -> set:
+        """description: 'Return absolute paths of python executables found in directory.'"""
         return {os.path.abspath(exe) for n in cls._path_names(*args, **kwargs)
                 if os.path.exists(exe := os.path.join(directory, n))}
 
@@ -101,11 +104,13 @@ class PythonVersions:
         return m.group(1) if m else None
 
     def _all_exes(self, *args, **kwargs) -> set:
+        """description: 'Union python executables found across all discovery sources.'"""
         sources = (self.from_py_launcher(*args, **kwargs), self.from_pyenv(*args, **kwargs),
                    self.from_uv(*args, **kwargs), self.from_path(*args, **kwargs))
         return set().union(*sources)
 
     def _collect_versions(self, *args, **kwargs) -> set:
+        """description: 'Probe all discovered exes and collect full + short version strings.'"""
         vers = set()
         for exe in self._all_exes(*args, **kwargs):
             v = self.version_of(*args, exe=exe, **kwargs)
@@ -116,7 +121,16 @@ class PythonVersions:
 
     @staticmethod
     def _ver_key(*args, ver: str, **kwargs) -> tuple:
+        """description: 'Convert version string to int tuple for sort ordering.'"""
         return tuple(int(x) for x in ver.split("."))
+
+    def __repr__(self, *args, **kwargs) -> str:
+        """description: 'Calling signature.'"""
+        return "PythonVersions(*args, **kwargs)"
+
+    def __str__(self, *args, **kwargs) -> str:
+        """description: 'Short text showing cached or pending version list.'"""
+        return f"PythonVersions(versions={self._cache!r})"
 
     def all(self, *args, **kwargs) -> list:
         """

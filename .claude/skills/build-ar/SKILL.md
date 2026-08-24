@@ -13,7 +13,8 @@ aggregates typically run this inside a `detective` subagent.
 
 # Expected Results / Deliverables
 - populated package directory tree including module dirs, resource dirs (use dfeaults), test dirs
-- all relevant module files with per module OOP skeletons
+- all relevant module files with per module OOP skeletons (`__init__` + core method +
+  `__str__`/`__repr__` per @rules/code_skeleton_python.md)
 - governance test modules skeletons for every model to be written 
 
 # Mandatory rule set

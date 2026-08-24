@@ -22,13 +22,16 @@ class AdminDispatcher:
     """
 
     def __init__(self, *args, **kwargs):
+        """description: 'Stateless dispatcher; no instance state required.'"""
         pass
 
     def dispatch(self, *args, **kwargs):
+        """description: 'Resolve and call the handler for the given command.'"""
         handler = self._handler(*args, **kwargs)
         handler(*args, **kwargs)
 
     def _handler(self, *args, command: str, **kwargs):
+        """description: 'Return the bound method for command; exit 2 if unknown.'"""
         mapping = {"clone": self._clone, "sync": self._sync}
         if command not in mapping:
             sys.stderr.write(f"Unknown admin command: {command}\n")
@@ -37,11 +40,21 @@ class AdminDispatcher:
 
     @staticmethod
     def _clone(*args, **kwargs):
+        """description: 'Delegate to clone_main.'"""
         clone_main(*args, **kwargs)
 
     @staticmethod
     def _sync(*args, **kwargs):
+        """description: 'Delegate to sync_main.'"""
         sync_main(*args, **kwargs)
+
+    def __repr__(self, *args, **kwargs) -> str:
+        """description: 'Calling signature.'"""
+        return "AdminDispatcher(*args, **kwargs)"
+
+    def __str__(self, *args, **kwargs) -> str:
+        """description: 'Short text identifying this dispatcher.'"""
+        return "AdminDispatcher"
 
 def main(*args, **kwargs):
     """

@@ -20,6 +20,7 @@ class Docstring:
     """
 
     def __init__(self, raw, *args, **kwargs):
+        """description: 'Accept raw docstring text; parse into meta dict and body string.'"""
         self.raw = raw or ""
         self.meta, self.body = self._parse(self.raw, *args, **kwargs)
 
@@ -57,6 +58,15 @@ class Docstring:
         """description: Lookup a meta key; return default when meta is None or absent."""
         return (self.meta or {}).get(key, default)
 
+    def __repr__(self, *args, **kwargs) -> str:
+        """description: 'Calling signature.'"""
+        return "Docstring(*args, **kwargs)"
+
+    def __str__(self, *args, **kwargs) -> str:
+        """description: 'Short text showing parse state and description key if present.'"""
+        desc = (self.meta or {}).get("description", "")
+        return f"Docstring(meta={'ok' if self.meta else 'None'}, description={desc!r})"
+
 
 class Docstrings:
     """
@@ -77,3 +87,11 @@ class Docstrings:
                         for m in node.body
                         if isinstance(m, (ast.FunctionDef, ast.AsyncFunctionDef))}
         return {}
+
+    def __repr__(self, *args, **kwargs) -> str:
+        """description: 'Calling signature.'"""
+        return "Docstrings(*args, **kwargs)"
+
+    def __str__(self, *args, **kwargs) -> str:
+        """description: 'Short text identifying this factory.'"""
+        return "Docstrings(factory: from_node | from_class)"
