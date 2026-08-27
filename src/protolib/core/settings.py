@@ -36,8 +36,12 @@ test_data_dir = os.path.join(test_dir, "data")
 ignore_dirs = {
     ".git", ".venv", ".uv", "build", "gp", "dist", "models",
     "*.egg-info", "__pycache__", ".pytest_cache", ".tox", "*helpers",
+    "blueprint",
 }
 abrev_dirs = {"log", "logs", "testopia_logs", "chat_logs"}
+# fresh blueprint tree scaffolded into every clone (never copied from the source) so new
+# packages start on the bpm lane — routing contract: ~/.claude/rules/bp_routing.md
+blueprint_scaffold_dirs = [os.path.join("blueprint", "experiments", "prototype")]
 
 table_max_chars = 200
 resources_dir = os.path.expanduser(f"~{os.sep}.{package_name}")

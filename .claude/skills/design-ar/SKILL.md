@@ -29,7 +29,9 @@ Host-level UAT/EtE test planning:
 # Workflow
 1. **Blueprint gate.** Parse `$ARGUMENTS` → second token is `<scope>` or
    `<bp-path>`. If it resolves to an existing file → bp-path in hand, skip to
-   step 2.
+   step 2. Flipped packages (@rules/bp_routing.md): the bp lives at
+   `<pkg>/blueprint/<CR>_bp_*.md`, created via `bpm new bp` (bs release gates it);
+   reviews land via `bpm approve <cr> bp`.
    NOTE: If it's free-text scope → revert to @skills/design-build-test (full design build test skill)
 2. **Basis gate.** Orient on the `blueprint.md` scaffold (purpose, preamble, type)
    + `_implementation_plan.md`, then check for the **brainstorm document and/or

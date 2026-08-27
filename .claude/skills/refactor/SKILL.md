@@ -24,7 +24,8 @@ cannot hold an interactive brainstorm loop. Spec: @rules/brainstorm.md.
    `Skill(brainstorm, args="<scope>")` in the main conversation and STOP.
    Do not `Task()`. Return the brainstorm output; the user re-invokes this
    aggregate with the bp-path once the brainstorm ripens 4/4 and
-   `mk_blueprint.sh "<topic>" <project> refactor` has produced the pair.
+   `mk_blueprint.sh "<topic>" <project> refactor` (legacy) or `bpm new bp rf`
+   on a flipped package (@rules/bp_routing.md) has produced the pair.
 
 Phase 1 — write the refactor design (bp-path guaranteed):
 ```

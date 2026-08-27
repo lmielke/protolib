@@ -10,9 +10,11 @@ tags:
 - testing
 update_rules: Append scenarios. Never remove existing tests.
 """
+import os
 import unittest
 from unittest import mock
 
+import protolib.core.settings as sts
 from protolib.core.creator.clone import CloneParams, Cloner, Validator, clone_info
 
 
@@ -130,6 +132,26 @@ class TestPostFlight(unittest.TestCase):
             with self.assertRaises(SystemExit) as ctx:
                 self.cloner._post_gate("/new/path", install=True)
         self.assertEqual(ctx.exception.code, 2)
+
+
+class TestBlueprintScaffold(unittest.TestCase):
+    """Cloner.scaffold_blueprint: every clone starts flipped on the bpm lane."""
+
+    def test_scaffold_creates_blueprint_tree(self, *args, **kwargs):
+        import tempfile
+        cloner = Cloner("/src", verbose=0, source_settings=mock.Mock())
+        with tempfile.TemporaryDirectory() as project_path:
+            cloner.scaffold_blueprint(project_path)
+            expected = os.path.join(project_path, "blueprint", "experiments", "prototype")
+            self.assertTrue(os.path.isdir(expected))
+            # idempotent — a re-run on an existing tree must not raise
+            cloner.scaffold_blueprint(project_path)
+
+    def test_source_blueprint_never_copied(self, *args, **kwargs):
+        # the copy ignores source blueprint dirs; only the fresh scaffold may exist
+        self.assertIn("blueprint", sts.ignore_dirs)
+        self.assertEqual(sts.blueprint_scaffold_dirs,
+                         [os.path.join("blueprint", "experiments", "prototype")])
 
 
 if __name__ == '__main__':

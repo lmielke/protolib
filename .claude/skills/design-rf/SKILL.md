@@ -34,7 +34,8 @@ Log any automation candidate at close:
    `<bp-path>`. If it resolves to an existing file → bp-path in hand, skip to
    step 1. If it's free-text scope → `Skill(brainstorm, args="<scope>")` and
    STOP. Return the brainstorm output verbatim; the user re-invokes this
-   skill with the bp-path produced via `mk_blueprint.sh … refactor` once the
+   skill with the bp-path produced via `mk_blueprint.sh … refactor` (legacy) or
+   `bpm new bp rf <name>` on a flipped package (@rules/bp_routing.md) once the
    brainstorm ripens 4/4. If both missing → fail loud, ask for scope.
 1. Parse `$ARGUMENTS` → `<project> <bp-path>` (gate guaranteed bp-path).
 2. Read the paired `_implementation_plan.md`; confirm blueprint type is

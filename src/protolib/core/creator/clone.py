@@ -2,7 +2,8 @@
 script_path: src/protolib/core/creator/clone.py
 description: >-
   Orchestrates the cloning of the protolib template into a new project by collecting inputs,
-  copying the tree, and transforming files. Builds text-replacement and rename rules from
+  copying the tree, transforming files, and scaffolding the fresh blueprint/ tree (bpm lane).
+  Builds text-replacement and rename rules from
   old to new identity mappings. Validates user-supplied port and Python version before execution.
   Consumed by the CLI entry point to generate a new project instance.
 tags:
@@ -275,6 +276,14 @@ class Cloner:
         tx.rewrite(params.text_repls())
         tx.set_pyproject_version(os.path.join(project_path, 'pyproject.toml'), py_version)
 
+    def scaffold_blueprint(self, project_path, *args, **kwargs):
+        """
+        description: 'Create the fresh blueprint/ tree (settings.blueprint_scaffold_dirs) so
+        the clone starts flipped on the bpm lane; source blueprint dirs are never copied.'
+        """
+        for rel_dir in sts.blueprint_scaffold_dirs:
+            os.makedirs(os.path.join(project_path, rel_dir), exist_ok=True)
+
     def setup(self, project_path, *args, install=False, **kwargs):
         """description: 'Run uv sync in project_path if install=True, else print skip note.'"""
         if not install:
@@ -319,12 +328,13 @@ class Cloner:
         if self.verbose >= 1: print(f"{Fore.YELLOW}Post-gate skipped.{Fore.RESET}")
 
     def run(self, *args, port=None, **kwargs):
-        """description: Atomic clone workflow (collect, copy, transform, setup, gate)."""
+        """description: Atomic clone workflow (collect, copy, transform, scaffold, setup, gate)."""
         tgt_dir, pr_name, pg_name, alias = CloneUI().collect(**kwargs)
         params = CloneParams.from_settings(self.source_settings, new_pr_name=pr_name,
             new_pg_name=pg_name, new_alias=alias, new_port=port)
         project_path = self.copy_project(tgt_dir, pr_name, *args, **kwargs)
         self.transform(project_path, params, *args, **kwargs)
+        self.scaffold_blueprint(project_path, *args, **kwargs)
         self.setup(project_path, *args, **kwargs)
         self._post_gate(project_path, *args, **kwargs)
         return project_path
