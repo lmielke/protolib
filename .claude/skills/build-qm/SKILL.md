@@ -1,41 +1,26 @@
 ---
 name: build-qm
-description: "Final verification of a BUILT blueprint before sign-off -- confirms tests pass and references resolve, and flags any blockers. Read-only: it reports problems but does NOT fix them. Use when implementation is done and needs a clean bill of health: 'verify the build is clean', 'QM check after implementation', 'confirm tests pass and refs resolve before sign-off'. This is the build-side gate; to review the design before build use design-qm, and for both gates in one pass recommend /qm. For general factual questions use info."
-argument-hint: "[project] [bp-path]"
+description: "Independent read-only review of a BUILT stage -- the skeleton or the code of a sprint -- before sign-off: confirms the stage matches its spec, tests pass, governance is clean and the paths the spec names resolve, and flags any blockers. Read-only: it reports problems but does NOT fix them. Use when a skeleton or code review task asks for a build-qm, or implementation is done and needs a clean bill of health: 'verify the build is clean', 'QM check after implementation', 'confirm tests pass before sign-off'. This is the build-side gate; to review the design before build use design-qm. For general factual questions use info."
+argument-hint: "[project] [branch-and-sha]"
 allowed-tools: Read, Glob, Grep, Bash
 ---
 
 # Purpose
-Read-only QM review of a built blueprint. Verifies structural moves landed,
-tests pass, governance is clean, every `@rules/` and `@skills/` ref
-resolves. No writes — blockers surface in the memo. Runs inline —
-aggregates typically run this inside a `detective` subagent.
-
-# Rule set
-Implementation plan expectations:
-@rules/bp_implementation_plan.md
-
-Refactor discipline for ref sweeps:
-@rules/code_refactor.md
-
-Governance skeletons to check against:
-@rules/code_style_python.md
-@rules/test_style_python.md
-@rules/test_gov.md
-
-Preferred tools for sweeps and suite runs:
-@rules/tools.md
-
-Log any automation candidate at close:
-@rules/automation.md
+Read-only review of a committed build stage, run by an agent other than the builder
+(AGENTS.md chapter 2: a second model reviews). It writes nothing; blockers surface in the
+memo and the hand folds every finding in place with a follow-up commit.
 
 # Workflow
-1. Parse `$ARGUMENTS` → `<project> <bp-path>`.
-2. Read the blueprint + implementation plan. Confirm every `[done]`
-   matches reality on disk.
-3. Run the test suite via `uv run pytest` (or the project's runner). Note, if qm is done on design-ar, then some errors are expected.
-4. verify governance adherence @rules/governance_health.md
-5. Plan the execution @rules/act.md based on actual and expected/desired state
-6. Ref sweep: `fdc "@rules/"` and `fdc "@skills/"` — every hit must
-   resolve.
-7. Return `MEMO: <2-3 lines — clean or list of blockers>\nPATH: <bp-path>`.
+1. Parse `$ARGUMENTS` → `<project> <branch-and-sha>`: the committed stage on the build
+   branch. The skeleton and code inform and review task readmes under
+   `~/.eddie/templates/blueprints/tasks/` give the scope and the five values the hand
+   reports (reviewer, branch, sha, verdict, findings).
+2. Read the spec of every unit the sprint touches, and the im. Confirm each step marked
+   done matches reality on disk and every Acceptance row has a test.
+3. Run the suite in the build worktree (`uv run pytest` or the project runner), and the
+   spec checker on each touched spec. On a skeleton stage the planned tests stand as
+   expected failures; on the code stage none may.
+4. Governance: `uv run gov run` on the touched files. Zero errors; every warning has a
+   `docs ma` entry.
+5. Path sweep: every path in the Pointers rows of the touched specs exists.
+6. Return `MEMO: <2-3 lines — verdict ok or nok, findings count, blockers listed>\nPATH: <stage-ref>`.
