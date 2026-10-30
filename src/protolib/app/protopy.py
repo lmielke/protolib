@@ -19,29 +19,38 @@ from protolib.app.contracts import Contracts as _Contracts
 
 class DefaultClass:
     """
-    "description": >-
+    description: >-
       Contains only instantiations and calls.
-          Override run() in clones to customise the execution sequence.
+      Override run() in clones to customise the execution sequence.
     """
 
     def __init__(self, *args, pg_name: str = None, verbose: int = 0, **kwargs) -> None:
+        """description: Stores package name and verbosity level for use during dispatch."""
         self.verbose = verbose
         self.pg_name = pg_name
 
+    def __repr__(self, *args, **kwargs) -> str:
+        """description: Machine-readable representation of this DefaultClass instance."""
+        return f"DefaultClass(pg_name={self.pg_name!r})"
+
     def __str__(self, *args, **kwargs) -> str:
+        """description: Human-readable summary of this DefaultClass instance."""
         return f"DefaultClass: {self.pg_name = }"
 
     def run(self, *args, **kwargs):
+        """description: Parse CLI args, validate via Contracts, and dispatch to the target API."""
         kw = arguments.mk_args().__dict__
         self._dispatch(*args, **_Contracts().checks(*args, **kw), **kwargs)
 
     def _dispatch(self, *args, api: str = "help", **kwargs):
+        """description: Import and invoke the API module matching the given api name."""
         if api == "help":
             return
         mod = _import_api(api, *args, **kwargs)
         mod.main(*args, **kwargs)
 
 def _import_api(name: str, *args, **kwargs):
+    """description: Resolve an API name to its module by searching all configured api_packages."""
     for _, pkg in core_sts.api_packages:
         try:
             return importlib.import_module(f"{pkg}.{name}")

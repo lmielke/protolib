@@ -27,11 +27,20 @@ class SessionTracker:
     excluded = "test_governance.py"
 
     def __init__(self, *args, **kwargs):
+        """description: 'Resolve package name from pyproject.toml and initialise failure set.'"""
         self._root = Path(__file__).parent
         self._pkg = tomllib.loads(
             (self._root / "pyproject.toml").read_text()
         ).get("project", {}).get("name", "protolib")
         self._failed = set()
+
+    def __repr__(self, *args, **kwargs) -> str:
+        """description: 'Machine-readable representation showing package and failure count.'"""
+        return f"SessionTracker(pkg={self._pkg!r}, failed={len(self._failed)})"
+
+    def __str__(self, *args, **kwargs) -> str:
+        """description: 'Human-readable summary showing package and failure count.'"""
+        return f"SessionTracker(pkg={self._pkg}, failed={len(self._failed)})"
 
     def track_failure(self, report, *args, **kwargs) -> None:
         """description: 'Record a failed test node ID, skipping excluded files.'"""

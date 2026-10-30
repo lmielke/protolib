@@ -9,8 +9,6 @@ tags:
 - infra
 - parsing
 - settings
-governance_exceptions:
-- c41: duplicate basename at app/settings.py, core/settings.py
 """
 import os, re, yaml
 from datetime import datetime as dt
@@ -62,30 +60,48 @@ _DEFAULT_SETTINGS = {
     'registry_heartbeat_interval': 60,
 }
 
-
 registry_port = int(os.environ.get("REGISTRY_PORT", 9000))
 service_host = os.environ.get("SERVICE_HOST", "127.0.0.1")
 registry_url = f"http://127.0.0.1:{registry_port}"
 registry_host_enabled = False
-registry_state_file = os.path.join(resources_dir, "registry_state.json")
 registry_heartbeat_interval = 60
 
 table_max_chars = 200
 error_path = os.path.join(resources_dir, "error.log")
 
-def _ensure_user_settings(*args, **kwargs):
-    if os.path.exists(user_settings_path):
-        return
-    with open(user_settings_path, 'w') as f:
-        yaml.dump(_DEFAULT_SETTINGS, f)
+
+class _UserSettings:
+    """description: 'Manages the user settings YAML file: creation on first run and loading.'"""
+
+    def __init__(self, *args, **kwargs):
+        """description: 'Ensure the settings file exists; load its values.'"""
+        self._ensure(*args, **kwargs)
+        self.values = self._load(*args, **kwargs)
+
+    def _ensure(self, *args, **kwargs):
+        """description: 'Write default settings YAML if the file is absent.'"""
+        if os.path.exists(user_settings_path):
+            return
+        with open(user_settings_path, 'w') as f:
+            yaml.dump(_DEFAULT_SETTINGS, f)
+
+    def _load(self, *args, **kwargs) -> dict:
+        """description: 'Return parsed YAML from the user settings file.'"""
+        with open(user_settings_path, 'r') as f:
+            return yaml.safe_load(f) or {}
+
+    def __repr__(self, *args, **kwargs) -> str:
+        """description: 'Machine-readable representation.'"""
+        return "_UserSettings()"
+
+    def __str__(self, *args, **kwargs) -> str:
+        """description: 'Human-readable summary.'"""
+        return f"_UserSettings({user_settings_path})"
 
 def load_user_settings(*args, **kwargs) -> dict:
-    """
-    description: Load user settings from the YAML file.
-    """
-    with open(user_settings_path, 'r') as f:
-        return yaml.safe_load(f) or {}
+    """description: 'Load user settings from the YAML file.'"""
+    return _UserSettings(*args, **kwargs).values
 
-_ensure_user_settings()
-user_settings = load_user_settings()
+
+user_settings = _UserSettings().values
 globals().update(user_settings)

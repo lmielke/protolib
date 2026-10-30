@@ -50,50 +50,77 @@ _OPTIONAL = [
      "help": "skip confirmation prompts during clone"},
 ]
 
-def _add_positional(parser, *args, **kwargs):
-    for spec in _POSITIONAL:
-        parser.add_argument(spec["name"], metavar=spec.get("metavar"), help=spec.get("help"))
 
-def _add_optional(parser, *args, **kwargs):
-    for spec in _OPTIONAL:
-        flags, kw = _parse_spec(spec, *args, **kwargs)
-        parser.add_argument(*flags, **kw)
+class Arguments:
+    """description: 'Owns the protolib CLI argument schema and parser construction.'"""
 
-def _parse_spec(spec: dict, *args, **kwargs) -> tuple:
-    flags = [k for k in spec if k.startswith("-")]
-    long_val = spec.get(flags[0]) if len(flags) == 1 else None
-    if long_val:
-        flags.append(long_val)
-    kw = {k: v for k, v in spec.items() if not k.startswith("-")}
-    kw.setdefault("default", None)
-    return flags, kw
+    def __init__(self, *args, **kwargs):
+        """description: 'Build the ArgumentParser with all registered flags.'"""
+        self.parser = argparse.ArgumentParser(description="run: python -m protolib info")
+        self._add_positional(self.parser, *args, **kwargs)
+        self._add_optional(self.parser, *args, **kwargs)
+
+    def __repr__(self, *args, **kwargs) -> str:
+        """description: 'Machine-readable representation.'"""
+        return "Arguments()"
+
+    def __str__(self, *args, **kwargs) -> str:
+        """description: 'Human-readable summary.'"""
+        return "Arguments(protolib)"
+
+    def parse(self, *args, **kwargs):
+        """description: 'Return parsed argparse.Namespace from sys.argv.'"""
+        return self.parser.parse_args()
+
+    def get_required_flags(self, *args, **kwargs) -> dict:
+        """description: 'Return a dict mapping each flag/dest to its required status.'"""
+        flags = {}
+        for action in self.parser._actions:
+            if isinstance(action, argparse._StoreAction):
+                self._collect_action_flags(*args, action=action, flags=flags, **kwargs)
+        return flags
+
+    def _add_positional(self, parser, *args, **kwargs):
+        """description: 'Register all positional arguments from _POSITIONAL into the parser.'"""
+        for spec in _POSITIONAL:
+            parser.add_argument(spec["name"], metavar=spec.get("metavar"), help=spec.get("help"))
+
+    def _add_optional(self, parser, *args, **kwargs):
+        """description: 'Register all optional arguments from _OPTIONAL into the parser.'"""
+        for spec in _OPTIONAL:
+            flags, kw = self._parse_spec(spec, *args, **kwargs)
+            parser.add_argument(*flags, **kw)
+
+    def _parse_spec(self, spec: dict, *args, **kwargs) -> tuple:
+        """description: 'Convert a flag spec dict into (flags_list, kwargs_dict) for add_argument.'"""
+        flags = [k for k in spec if k.startswith("-")]
+        long_val = spec.get(flags[0]) if len(flags) == 1 else None
+        if long_val:
+            flags.append(long_val)
+        kw = {k: v for k, v in spec.items() if not k.startswith("-")}
+        kw.setdefault("default", None)
+        return flags, kw
+
+    def _extract_flag(self, action, *args, **kwargs) -> tuple:
+        """description: 'Extract (option_strings, dest, is_required) from a single argparse action.'"""
+        is_req = getattr(action, 'required', True) if not action.option_strings \
+            else action.required
+        return action.option_strings, action.dest, is_req
+
+    def _collect_action_flags(self, *args, action, flags: dict, **kwargs) -> None:
+        """description: 'Populate flags dict with option strings (or dest) mapped to required status.'"""
+        opts, dest, is_req = self._extract_flag(action, *args, **kwargs)
+        for opt in opts:
+            flags[opt] = is_req
+        if not opts:
+            flags[dest] = is_req
 
 def mk_args(*args, **kwargs):
-    parser = argparse.ArgumentParser(description="run: python -m protolib info")
-    _add_positional(parser, *args, **kwargs)
-    _add_optional(parser, *args, **kwargs)
-    return parser.parse_args()
-
-def _extract_flag(action, *args, **kwargs) -> tuple:
-    is_req = getattr(action, 'required', True) if not action.option_strings \
-        else action.required
-    return action.option_strings, action.dest, is_req
-
-def _collect_action_flags(*args, action, flags: dict, **kwargs) -> None:
-    opts, dest, is_req = _extract_flag(action, *args, **kwargs)
-    for opt in opts:
-        flags[opt] = is_req
-    if not opts:
-        flags[dest] = is_req
-
-def get_required_flags(parser: argparse.ArgumentParser, *args, **kwargs) -> dict:
-    flags = {}
-    for action in parser._actions:
-        if isinstance(action, argparse._StoreAction):
-            _collect_action_flags(*args, action=action, flags=flags, **kwargs)
-    return flags
+    """description: 'Module-level shim — delegates to Arguments().parse().'"""
+    return Arguments(*args, **kwargs).parse(*args, **kwargs)
 
 
 if __name__ == "__main__":
-    ns = mk_args()
-    sys.stdout.write(get_required_flags(ns) + "\n")
+    a = Arguments()
+    ns = a.parse()
+    sys.stdout.write(str(a.get_required_flags()) + "\n")

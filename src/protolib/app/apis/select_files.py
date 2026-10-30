@@ -31,17 +31,21 @@ class SelectFiles:
                                            path=self.path, **kwargs), *args, **kwargs)
 
     def __repr__(self) -> str:
+        """description: 'Machine-readable representation with path and json flag.'"""
         return f"SelectFiles(path={self.path!r}, as_json={self.as_json!r})"
 
     def __str__(self) -> str:
+        """description: 'Human-readable label showing resolved path and output mode.'"""
         return f"SelectFiles({self.path or 'no target'}, json={self.as_json})"
 
 def _no_target_msg(*args, **kwargs) -> str:
+    """description: 'Return usage hint when no target path was provided.'"""
     return ("select_files: no target provided.\n"
             "Usage: /select_files/?target=src/protolib/apis/info.py\n"
             "Returns files reachable via import graph from the given file.")
 
 def _format_output(*args, files: list, as_json: bool = False, path: str = "", **kwargs) -> str:
+    """description: 'Format resolved file list as newline-joined paths or JSON.'"""
     if not files:
         return f"select_files: no files found for target '{path}'."
     if as_json:
@@ -49,10 +53,12 @@ def _format_output(*args, files: list, as_json: bool = False, path: str = "", **
     return "\n".join(entry["file_path"] for entry in files)
 
 def _print_return(msg: str, *args, **kwargs) -> str:
+    """description: 'Print the message and return it.'"""
     print(msg)
     return msg
 
 def set_params(*args, **kwargs) -> dict:
+    """description: 'Parse CLI arguments and return them as a dict.'"""
     p = argparse.ArgumentParser(description="Import graph file lister.")
     p.add_argument("-t", "--target", type=str, default=None,
                    help="Python file to trace imports from.")

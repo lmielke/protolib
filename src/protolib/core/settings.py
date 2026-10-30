@@ -5,12 +5,11 @@ description: >-
   layer. Derives all directory paths from the file location using Django-style resolution
   to support package cloning without modification. Exposes API package pairs, registry endpoints,
   and user settings locations consumed by the registry and app dispatcher.
+  _PyProjectReader parses pyproject.toml to extract the primary script file name.
 tags:
 - infra
 - parsing
 - settings
-governance_exceptions:
-- c8: no class definition — verify OOP intent
 """
 import os, tomllib
 
@@ -60,9 +59,26 @@ registry_state_file = os.path.join(resources_dir, "registry_state.json")
 registry_host_enabled = False
 registry_heartbeat_interval = 60
 
-# main_file_name — first entry of pyproject [project.scripts], file part only.
-# Module scope (no def): c37 walks FunctionDefs only.
-_scripts = tomllib.loads(open(os.path.join(project_dir, "pyproject.toml")).read()
-                         ).get("project", {}).get("scripts", {})
-_first = next(iter(_scripts.values()), "")
-main_file_name = f"{_first.split(':')[0].split('.')[-1]}.py" if _first else ""
+
+class _PyProjectReader:
+    """description: 'Parses pyproject.toml to extract the primary script file name.'"""
+
+    def __init__(self, *args, path: str, **kwargs):
+        """description: 'Load and parse the scripts table from pyproject.toml at path.'"""
+        scripts = tomllib.loads(open(path).read()).get("project", {}).get("scripts", {})
+        self._first = next(iter(scripts.values()), "")
+
+    def main_file(self, *args, **kwargs) -> str:
+        """description: 'Return the Python file name for the first project.scripts entry.'"""
+        return f"{self._first.split(':')[0].split('.')[-1]}.py" if self._first else ""
+
+    def __str__(self, *args, **kwargs) -> str:
+        """description: 'Human-readable summary.'"""
+        return f"_PyProjectReader(first={self._first!r})"
+
+    def __repr__(self, *args, **kwargs) -> str:
+        """description: 'Calling signature.'"""
+        return "_PyProjectReader(*args, path=..., **kwargs)"
+
+
+main_file_name = _PyProjectReader(path=os.path.join(project_dir, "pyproject.toml")).main_file()

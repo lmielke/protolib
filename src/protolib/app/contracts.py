@@ -28,6 +28,14 @@ class Contracts:
     def __init__(self, *args, **kwargs):
         """description: 'No per-instance state; logic is driven by kwargs at call time.'"""
 
+    def __repr__(self, *args, **kwargs) -> str:
+        """description: 'Machine-readable representation of the Contracts validator.'"""
+        return "Contracts()"
+
+    def __str__(self, *args, **kwargs) -> str:
+        """description: 'Human-readable summary of the Contracts validator.'"""
+        return "Contracts()"
+
     _CLONE_REQUIRED = {
         'new_pr_name': 'myhammerlib',
         'new_pg_name': 'myhammer',
@@ -99,6 +107,7 @@ class Contracts:
         return os.path.normpath(p)
 
     def _pkg_data(self, *args, **kwargs) -> dict:
+        """description: Collect project and package path metadata from settings for injection into kwargs."""
         return {
             'project_dir': getattr(sts, 'project_dir', None),
             'package_dir': getattr(sts, 'package_dir', None),
@@ -108,6 +117,7 @@ class Contracts:
         }
 
     def _report_missing(self, missings: set, reqs: dict, *args, **kwargs):
+        """description: Write a colored error to stderr listing missing required arguments, then exit."""
         sys.stderr.write(f"{Fore.RED}Missing required arguments: {missings}{Style.RESET_ALL}\n")
         sys.stderr.write(f"{Fore.YELLOW}Required: {reqs}{Style.RESET_ALL}\n")
         exit()

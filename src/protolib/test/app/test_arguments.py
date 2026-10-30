@@ -3,7 +3,7 @@ script_path: src/protolib/test/app/test_arguments.py
 description: >-
   Runs integration tests for the CLI argument parsing module in protolib. Verifies that spec
   dictionaries extract correct flags and keyword arguments, and that positional and optional
-  definitions are well-formed. Confirms that helper functions correctly register arguments
+  definitions are well-formed. Confirms that helper methods correctly register arguments
   on an argparse parser instance.
 tags:
 - cli
@@ -12,9 +12,7 @@ tags:
 update_rules: Append scenarios. Never remove existing tests.
 """
 import unittest
-from protolib.app.arguments import (
-    _POSITIONAL, _OPTIONAL, _parse_spec, _add_positional, _add_optional,
-)
+from protolib.app.arguments import Arguments, _POSITIONAL, _OPTIONAL
 import argparse
 
 
@@ -23,20 +21,20 @@ class TestParseSpec(unittest.TestCase):
 
     def test_short_and_long_flag(self, *args, **kwargs):
         spec = {"-v": "--verbose", "type": int, "help": "verbosity"}
-        flags, kw = _parse_spec(spec)
+        flags, kw = Arguments()._parse_spec(spec)
         assert "-v" in flags
         assert "--verbose" in flags
         assert kw["type"] is int
 
     def test_long_only_flag(self, *args, **kwargs):
         spec = {"--port": None, "type": str, "help": "port"}
-        flags, kw = _parse_spec(spec)
+        flags, kw = Arguments()._parse_spec(spec)
         assert "--port" in flags
         assert len(flags) == 1
 
     def test_default_none(self, *args, **kwargs):
         spec = {"--test": None, "type": str, "help": "x"}
-        _, kw = _parse_spec(spec)
+        _, kw = Arguments()._parse_spec(spec)
         assert kw["default"] is None
 
 
@@ -61,13 +59,13 @@ class TestAddArguments(unittest.TestCase):
 
     def test_adds_positional(self, *args, **kwargs):
         p = argparse.ArgumentParser()
-        _add_positional(p)
+        Arguments()._add_positional(p)
         actions = {a.dest for a in p._actions}
         assert "api" in actions
 
     def test_adds_optional(self, *args, **kwargs):
         p = argparse.ArgumentParser()
-        _add_optional(p)
+        Arguments()._add_optional(p)
         dests = {a.dest for a in p._actions}
         assert "verbose" in dests
         assert "port" in dests

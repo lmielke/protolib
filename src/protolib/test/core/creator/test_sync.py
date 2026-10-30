@@ -176,6 +176,28 @@ class TestTriggerChildSync(unittest.TestCase):
         finally:
             shutil.rmtree(root)
 
+    def test_depth_at_limit_skips_subprocess(self, *args, **kwargs):
+        with mock.patch.dict(os.environ, {"PROTO_SYNC_DEPTH": "3"}), \
+                mock.patch("protolib.core.creator.sync.subprocess.run") as m:
+            _trigger_child_sync(entry=self.entry)
+        m.assert_not_called()
+
+    def test_depth_below_limit_increments_env(self, *args, **kwargs):
+        with mock.patch.dict(os.environ, {"PROTO_SYNC_DEPTH": "1"}), \
+                mock.patch("protolib.core.creator.sync.subprocess.run") as m:
+            _trigger_child_sync(entry=self.entry)
+        args_, kwargs_ = m.call_args
+        self.assertEqual(args_[0], ["uv", "run", "proto-admin", "sync"])
+        self.assertEqual(kwargs_["cwd"], "/tmp/myclone")
+        self.assertEqual(kwargs_["env"]["PROTO_SYNC_DEPTH"], "2")
+
+    def test_unset_depth_starts_at_one(self, *args, **kwargs):
+        env = {k: v for k, v in os.environ.items() if k != "PROTO_SYNC_DEPTH"}
+        with mock.patch.dict(os.environ, env, clear=True), \
+                mock.patch("protolib.core.creator.sync.subprocess.run") as m:
+            _trigger_child_sync(entry=self.entry)
+        self.assertEqual(m.call_args[1]["env"]["PROTO_SYNC_DEPTH"], "1")
+
 
 class TestTransformTarget(unittest.TestCase):
     """_transform_target: rewrite caller→target identity in synced scopes."""

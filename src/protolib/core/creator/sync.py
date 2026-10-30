@@ -25,6 +25,10 @@ from protolib.core.creator.clones import Clones
 from protolib.core.creator.gate import run_gate
 from protolib.core.creator.tree_transform import TreeTransformer
 
+# recursion guard for post-sync child hook: env var carries current depth
+DEPTH_ENV = "PROTO_SYNC_DEPTH"
+MAX_SYNC_DEPTH = 3
+
 
 class Synchronizer:
     """
@@ -163,13 +167,22 @@ def _write_sync_log(*args, entry: dict, copied: list, **kwargs) -> None:
             "synced_by": sts.package_name, "files": sorted(copied)}
     (log_dir / "sync_log.yaml").write_text(yaml.dump(data, default_flow_style=False))
 
-def _trigger_child_sync(*args, entry: dict, **kwargs) -> None:
-    """description: Run `<target-alias>-admin sync` inside the clone to propagate further."""
+def _clone_alias(*args, entry: dict, **kwargs) -> str:
+    """description: 'Load clone app settings; return its alias or proto fallback.'"""
     target_root = str(Path(entry["path"]) / "src" / entry["name"])
     tgt = _load_app_settings(*args, target_root=target_root, pkg_name=entry["name"], **kwargs)
-    alias = getattr(tgt, "alias", "proto") if tgt else "proto"
+    return getattr(tgt, "alias", "proto") if tgt else "proto"
+
+def _trigger_child_sync(*args, entry: dict, **kwargs) -> None:
+    """description: Run `<target-alias>-admin sync` inside the clone to propagate further."""
+    depth = int(os.environ.get(DEPTH_ENV, "0"))
+    if depth >= MAX_SYNC_DEPTH:
+        print(f"  {entry['name']}: sync depth {depth} reached limit, skipping recursion")
+        return
+    alias = _clone_alias(*args, entry=entry, **kwargs)
     print(f"  {entry['name']}: recursing...")
-    subprocess.run(["uv", "run", f"{alias}-admin", "sync"], cwd=entry["path"])
+    env = {**os.environ, DEPTH_ENV: str(depth + 1)}
+    subprocess.run(["uv", "run", f"{alias}-admin", "sync"], cwd=entry["path"], env=env)
 
 def main(*args, **kwargs) -> dict:
     """description: Run gate, then push core/+helpers/ to all registered clones."""
